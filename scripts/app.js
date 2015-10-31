@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var createResultFragment, jsVisitor, jsVisitorProvider, jsonVisitorProvider, parser, reporter, tokenizer, visitor, visitorProvider;
+var createResultFragment, examplesManager, jsVisitor, jsVisitorProvider, jsonVisitorProvider, parser, reporter, tokenizer, visitor, visitorProvider;
 
 tokenizer = require("tokenizer");
 
@@ -11,6 +11,8 @@ visitorProvider = require("visitor/tree_view_visitor");
 jsonVisitorProvider = require("visitor/json_visitor");
 
 jsVisitorProvider = require("visitor/js_visitor");
+
+examplesManager = require("examples");
 
 reporter = {
   report: console.log.bind(console)
@@ -33,14 +35,14 @@ createResultFragment = function(d, tokens) {
 };
 
 window.addEventListener("load", function() {
-  var $input, $result;
+  var $examples, $input, $result, compile;
+  $examples = document.getElementById("examples");
   $input = document.getElementById("input");
   $result = document.getElementById("result");
-  return $input.addEventListener("change", function() {
-    var $fragment, expr, i, len, lexer, results, s;
-    s = $input.value;
+  compile = function(code) {
+    var $fragment, expr, i, len, lexer, results;
     console.time("tokenizer");
-    lexer = tokenizer(s);
+    lexer = tokenizer(code);
     console.timeEnd("tokenizer");
     console.time("parser");
     results = parser.parse(lexer);
@@ -54,12 +56,25 @@ window.addEventListener("load", function() {
       return expr.accept(jsVisitor);
     }));
     return $result.appendChild($fragment);
+  };
+  (function() {
+    var $fragment, key, seed;
+    seed = $examples.getAttribute("data-seed");
+    key = $examples.getAttribute("data-key");
+    $fragment = examplesManager.createFragment(document, seed, key, function(example) {
+      $input.value = example;
+      return compile(example);
+    });
+    return $examples.appendChild($fragment);
+  })();
+  return $input.addEventListener("change", function() {
+    return compile($input.value);
   });
 });
 
 
 
-},{"parser":5,"tokenizer":7,"visitor/js_visitor":8,"visitor/json_visitor":9,"visitor/tree_view_visitor":10}],2:[function(require,module,exports){
+},{"examples":4,"parser":6,"tokenizer":8,"visitor/js_visitor":9,"visitor/json_visitor":10,"visitor/tree_view_visitor":11}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -74,7 +89,7 @@ module.exports = prefixedKV("AST", {
 
 
 
-},{"prefixed_kv":6}],3:[function(require,module,exports){
+},{"prefixed_kv":7}],3:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -98,7 +113,32 @@ module.exports = prefixedKV("TOKEN", {
 
 
 
-},{"prefixed_kv":6}],4:[function(require,module,exports){
+},{"prefixed_kv":7}],4:[function(require,module,exports){
+"use strict";
+var examples;
+
+examples = ["p0    := \\f x.x", "p1    := \\f x.f x", "p2    := \\f x.f (f x)", "succ  := \\n f x.f (n f x)", "pred  := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "true  := \\x y.x", "false := \\x y.y", "and   := \\p q x y.p (q x y) y", "or    := \\p q x y.p x (q x y)", "not   := \\p x y.p y x"];
+
+exports.createFragment = function(d, seed, key, click) {
+  var $div, $fragment, example, i, len;
+  $fragment = d.createDocumentFragment();
+  for (i = 0, len = examples.length; i < len; i++) {
+    example = examples[i];
+    $div = d.createElement("div");
+    $div.innerHTML = seed.split(key).join(example);
+    $div.addEventListener("click", (function(code) {
+      return function() {
+        return click(code);
+      };
+    })(example));
+    $fragment.appendChild($div);
+  }
+  return $fragment;
+};
+
+
+
+},{}],5:[function(require,module,exports){
 "use strict";
 var create;
 
@@ -131,7 +171,7 @@ module.exports = {
 
 
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 "use strict";
 var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parse, parseApplication, parseDefinition, parseExpr, parseExprWithBrackets, parseIdentifier, parseLambdaAbstraction;
 
@@ -299,7 +339,7 @@ module.exports = {
 
 
 
-},{"AST":2,"TOKEN":3}],6:[function(require,module,exports){
+},{"AST":2,"TOKEN":3}],7:[function(require,module,exports){
 "use strict";
 module.exports = (function() {
   var prefixedKV;
@@ -321,7 +361,7 @@ module.exports = (function() {
 
 
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, locationDiff, mementoContainer, tokenize, whitespaceToken;
 
@@ -454,7 +494,7 @@ locationDiff = function(chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":4}],8:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":5}],9:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -493,7 +533,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],9:[function(require,module,exports){
+},{"AST":2}],10:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -532,7 +572,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],10:[function(require,module,exports){
+},{"AST":2}],11:[function(require,module,exports){
 "use strict";
 var AST, create;
 
