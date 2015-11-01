@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var createResultFragment, examplesManager, jsVisitor, jsVisitorProvider, jsonVisitorProvider, parser, reporter, tokenizer, visitor, visitorProvider;
+var createResultFragment, examplesAppender, jsVisitor, jsVisitorProvider, jsonVisitorProvider, parser, reporter, tokenizer, visitor, visitorProvider;
 
 tokenizer = require("tokenizer");
 
@@ -12,7 +12,7 @@ jsonVisitorProvider = require("visitor/json_visitor");
 
 jsVisitorProvider = require("visitor/js_visitor");
 
-examplesManager = require("examples");
+examplesAppender = require("views/append_examples");
 
 reporter = {
   report: console.log.bind(console)
@@ -42,7 +42,7 @@ window.addEventListener("load", function() {
   compile = function(code) {
     var $fragment, expr, i, len, lexer, results;
     console.time("tokenizer");
-    lexer = tokenizer(code);
+    lexer = tokenizer.tokenize(code);
     console.timeEnd("tokenizer");
     console.time("parser");
     results = parser.parse(lexer);
@@ -61,7 +61,7 @@ window.addEventListener("load", function() {
     var $fragment, key, seed;
     seed = $examples.getAttribute("data-seed");
     key = $examples.getAttribute("data-key");
-    $fragment = examplesManager.createFragment(document, seed, key, function(example) {
+    $fragment = examplesAppender.createFragment(document, seed, key, function(example) {
       $input.value = example;
       return compile(example);
     });
@@ -74,7 +74,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"examples":4,"parser":6,"tokenizer":8,"visitor/js_visitor":9,"visitor/json_visitor":10,"visitor/tree_view_visitor":11}],2:[function(require,module,exports){
+},{"parser":6,"tokenizer":8,"views/append_examples":9,"visitor/js_visitor":10,"visitor/json_visitor":11,"visitor/tree_view_visitor":12}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -106,7 +106,6 @@ module.exports = prefixedKV("TOKEN", {
   "INDENT": "INDENT",
   "EOF": "EOF",
   ERROR: {
-    "STRING": "STRING",
     "UNKNOWN_TOKEN": "UNKNOWN_TOKEN"
   }
 });
@@ -115,26 +114,7 @@ module.exports = prefixedKV("TOKEN", {
 
 },{"prefixed_kv":7}],4:[function(require,module,exports){
 "use strict";
-var examples;
-
-examples = ["p0     := \\f x.x", "p1     := \\f x.f x", "p2     := \\f x.f (f x)", "succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q x y.p (q x y) y", "or     := \\p q x y.p x (q x y)", "not    := \\p x y.p y x", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))"];
-
-exports.createFragment = function(d, seed, key, click) {
-  var $div, $fragment, example, i, len;
-  $fragment = d.createDocumentFragment();
-  for (i = 0, len = examples.length; i < len; i++) {
-    example = examples[i];
-    $div = d.createElement("div");
-    $div.innerHTML = seed.split(key).join(example);
-    $div.addEventListener("click", (function(code) {
-      return function() {
-        return click(code);
-      };
-    })(example));
-    $fragment.appendChild($div);
-  }
-  return $fragment;
-};
+module.exports = [[0, "p0     := \\f x.x", ["(p0 = ((f) -> (x) -> (x)))"]], [1, "p1     := \\f x.f x", ["(p1 = ((f) -> (x) -> ((f))(x)))"]], [2, "p2     := \\f x.f (f x)", ["(p2 = ((f) -> (x) -> ((f))(((f))(x))))"]], [3, "succ   := \\n f x.f (n f x)", ["(succ = ((n) -> (f) -> (x) -> ((f))((((n))(f))(x))))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["(pred = ((n) -> (f) -> (x) -> ((((n))(((g) -> (h) -> ((h))(((g))(f)))))(((u) -> (x))))(((v) -> (v)))))"]], [5, "true   := \\x y.x", ["(true = ((x) -> (y) -> (x)))"]], [6, "false  := \\x y.y", ["(false = ((x) -> (y) -> (y)))"]], [7, "and    := \\p q x y.p (q x y) y", ["(and = ((p) -> (q) -> (x) -> (y) -> (((p))((((q))(x))(y)))(y)))"]], [8, "or     := \\p q x y.p x (q x y)", ["(or = ((p) -> (q) -> (x) -> (y) -> (((p))(x))((((q))(x))(y))))"]], [9, "not    := \\p x y.p y x", ["(not = ((p) -> (x) -> (y) -> (((p))(y))(x)))"]], [10, "pair   := \\a b p.p a b", ["(pair = ((a) -> (b) -> (p) -> (((p))(a))(b)))"]], [11, "first  := \\p.p true", ["(first = ((p) -> ((p))(true)))"]], [12, "second := \\p.p false", ["(second = ((p) -> ((p))(false)))"]], [13, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["(Y = ((f) -> ((((x) -> ((f))(((x))(x)))))(((x) -> ((f))(((x))(x))))))"]]];
 
 
 
@@ -345,14 +325,14 @@ module.exports = (function() {
 
 },{}],8:[function(require,module,exports){
 "use strict";
-var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, locationDiff, mementoContainer, tokenize, whitespaceToken;
+var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
 
 TOKEN = require("TOKEN");
 
 mementoContainer = require("memento_container");
 
-module.exports = tokenize = function(code) {
-  var addToken, column, consumed, context, dc, dl, i, line, ref, tokens;
+exports.tokenize = function(code) {
+  var addToken, column, consumed, context, i, line, ref, tokens;
   code = cleanCode(code);
   tokens = [];
   line = 0;
@@ -377,9 +357,7 @@ module.exports = tokenize = function(code) {
   while (context.chunk = code.slice(i)) {
     consumed = commentToken(context) || whitespaceToken(context) || lineToken(context) || literalToken(context) || identifierToken(context) || errorToken(context);
     i += consumed;
-    ref = locationDiff(context.chunk, consumed), dl = ref[0], dc = ref[1];
-    line += dl;
-    column += dc;
+    ref = updateLocation(line, column, context.chunk, consumed), line = ref[0], column = ref[1];
   }
   addToken(TOKEN.EOF, "");
   return mementoContainer.create(tokens);
@@ -391,7 +369,7 @@ cleanCode = function(code) {
 
 COMMENT_LONG = /^#-(?:[^-]|-(?!#))*-#/;
 
-COMMENT_ONELINE = /^#[^\n]*\n/;
+COMMENT_ONELINE = /^#[^\n]*(?=\n|$)/;
 
 commentToken = function(c) {
   var match;
@@ -464,19 +442,48 @@ errorToken = function(c) {
   return match[0].length;
 };
 
-locationDiff = function(chunk, offset) {
-  var ls, str;
+updateLocation = function(l, c, chunk, offset) {
+  var dl, ls, str;
   if (offset === 0) {
     return [0, 0];
   }
   str = chunk.slice(0, offset);
   ls = str.split("\n");
-  return [ls.length - 1, ls[ls.length - 1].length];
+  dl = ls.length - 1;
+  if (dl === 0) {
+    return [l, c + ls[dl].length];
+  }
+  return [l + dl, ls[dl].length];
 };
 
 
 
 },{"TOKEN":3,"memento_container":5}],9:[function(require,module,exports){
+"use strict";
+var examples;
+
+examples = require("examples");
+
+exports.createFragment = function(d, seed, key, click) {
+  var $div, $fragment, example, i, len;
+  $fragment = d.createDocumentFragment();
+  for (i = 0, len = examples.length; i < len; i++) {
+    example = examples[i];
+    $div = d.createElement("div");
+    $div.innerHTML = seed.split(key).join(example[1]);
+    $div.addEventListener("click", (function(code) {
+      return function() {
+        return click(code);
+      };
+    })(example[1]));
+    $fragment.appendChild($div);
+  }
+  return $fragment;
+};
+
+
+
+},{"examples":4}],10:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -515,7 +522,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],10:[function(require,module,exports){
+},{"AST":2}],11:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -554,7 +561,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],11:[function(require,module,exports){
+},{"AST":2}],12:[function(require,module,exports){
 "use strict";
 var AST;
 
