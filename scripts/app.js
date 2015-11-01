@@ -22,13 +22,13 @@ visitor = visitorProvider.create(reporter);
 
 jsVisitor = jsVisitorProvider.create();
 
-createResultFragment = function(d, tokens) {
+createResultFragment = function(d, results) {
   var $fragment;
   $fragment = d.createDocumentFragment();
-  tokens.forEach(function(token) {
+  results.forEach(function(result) {
     var $p;
     $p = d.createElement("p");
-    $p.textContent = JSON.stringify(token);
+    $p.textContent = result;
     return $fragment.appendChild($p);
   });
   return $fragment;
@@ -114,7 +114,7 @@ module.exports = prefixedKV("TOKEN", {
 
 },{"prefixed_kv":7}],4:[function(require,module,exports){
 "use strict";
-module.exports = [[0, "p0     := \\f x.x", ["(p0 = ((f) -> (x) -> (x)))"]], [1, "p1     := \\f x.f x", ["(p1 = ((f) -> (x) -> ((f))(x)))"]], [2, "p2     := \\f x.f (f x)", ["(p2 = ((f) -> (x) -> ((f))(((f))(x))))"]], [3, "succ   := \\n f x.f (n f x)", ["(succ = ((n) -> (f) -> (x) -> ((f))((((n))(f))(x))))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["(pred = ((n) -> (f) -> (x) -> ((((n))(((g) -> (h) -> ((h))(((g))(f)))))(((u) -> (x))))(((v) -> (v)))))"]], [5, "true   := \\x y.x", ["(true = ((x) -> (y) -> (x)))"]], [6, "false  := \\x y.y", ["(false = ((x) -> (y) -> (y)))"]], [7, "and    := \\p q x y.p (q x y) y", ["(and = ((p) -> (q) -> (x) -> (y) -> (((p))((((q))(x))(y)))(y)))"]], [8, "or     := \\p q x y.p x (q x y)", ["(or = ((p) -> (q) -> (x) -> (y) -> (((p))(x))((((q))(x))(y))))"]], [9, "not    := \\p x y.p y x", ["(not = ((p) -> (x) -> (y) -> (((p))(y))(x)))"]], [10, "pair   := \\a b p.p a b", ["(pair = ((a) -> (b) -> (p) -> (((p))(a))(b)))"]], [11, "first  := \\p.p true", ["(first = ((p) -> ((p))(true)))"]], [12, "second := \\p.p false", ["(second = ((p) -> ((p))(false)))"]], [13, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["(Y = ((f) -> ((((x) -> ((f))(((x))(x)))))(((x) -> ((f))(((x))(x))))))"]]];
+module.exports = [[0, "p0     := \\f x.x", ["p0 = (f) -> (x) -> x"]], [1, "p1     := \\f x.f x", ["p1 = (f) -> (x) -> (f)(x)"]], [2, "p2     := \\f x.f (f x)", ["p2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "true   := \\x y.x", ["true = (x) -> (y) -> x"]], [6, "false  := \\x y.y", ["false = (x) -> (y) -> y"]], [7, "and    := \\p q x y.p (q x y) y", ["and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [8, "or     := \\p q x y.p x (q x y)", ["or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [9, "not    := \\p x y.p y x", ["not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [10, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [11, "first  := \\p.p true", ["first = (p) -> (p)(true)"]], [12, "second := \\p.p false", ["second = (p) -> (p)(false)"]], [13, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]]];
 
 
 
@@ -485,7 +485,8 @@ exports.createFragment = function(d, seed, key, click) {
 
 },{"examples":4}],10:[function(require,module,exports){
 "use strict";
-var AST;
+var AST,
+  slice = [].slice;
 
 AST = require("AST");
 
@@ -496,15 +497,19 @@ exports.create = function() {
     visit: visit
   };
   visit[AST.APPLICATION] = function(node) {
-    var res;
-    res = node.exprs.reduce((function(p, c) {
+    var first, others, ref, s;
+    ref = node.exprs, first = ref[0], others = 2 <= ref.length ? slice.call(ref, 1) : [];
+    s = first.accept(self);
+    if (others.length === 0) {
+      return s;
+    }
+    return others.reduce((function(p, c) {
       return "(" + p + ")(" + (c.accept(self)) + ")";
-    }), "\\dummy\\");
-    return res.split("(\\dummy\\)").join("");
+    }), s);
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
     var res, template;
-    template = "function (%arg%) { return (%body%); }";
+    template = "function (%arg%) { return %body%; }";
     res = "%body%";
     node.args.forEach(function(id) {
       return res = res.split("%body%").join(template.split("%arg%").join(id.value));
@@ -512,7 +517,7 @@ exports.create = function() {
     return res.split("%body%").join(node.body.accept(self));
   };
   visit[AST.DEFINITION] = function(node) {
-    return "var " + node.token.value + " = (" + (node.body.accept(self)) + ");";
+    return "var " + node.token.value + " = " + (node.body.accept(self)) + ";";
   };
   visit[AST.IDENTIFIER] = function(node) {
     return node.token.value;
