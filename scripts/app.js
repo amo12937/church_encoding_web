@@ -117,7 +117,7 @@ module.exports = prefixedKV("TOKEN", {
 "use strict";
 var examples;
 
-examples = ["p0    := \\f x.x", "p1    := \\f x.f x", "p2    := \\f x.f (f x)", "succ  := \\n f x.f (n f x)", "pred  := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "true  := \\x y.x", "false := \\x y.y", "and   := \\p q x y.p (q x y) y", "or    := \\p q x y.p x (q x y)", "not   := \\p x y.p y x"];
+examples = ["p0     := \\f x.x", "p1     := \\f x.f x", "p2     := \\f x.f (f x)", "succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q x y.p (q x y) y", "or     := \\p q x y.p x (q x y)", "not    := \\p x y.p y x", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))"];
 
 exports.createFragment = function(d, seed, key, click) {
   var $div, $fragment, example, i, len;
@@ -173,63 +173,64 @@ module.exports = {
 
 },{}],6:[function(require,module,exports){
 "use strict";
-var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parse, parseApplication, parseDefinition, parseExpr, parseExprWithBrackets, parseIdentifier, parseLambdaAbstraction;
+var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction;
 
 TOKEN = require("TOKEN");
 
 AST = require("AST");
 
-acceptor = function(visitor) {
-  var base, name;
-  return typeof (base = visitor.visit)[name = this.tag] === "function" ? base[name](this) : void 0;
+exports.parse = function(lexer) {
+  var app, apps;
+  apps = [];
+  while (app = parseApplication(lexer)) {
+    apps.push(app);
+  }
+  return apps;
 };
 
-identifierNode = function(idToken) {
-  return {
-    tag: AST.IDENTIFIER,
-    token: idToken,
-    accept: acceptor
-  };
-};
-
-lambdaAbstractionNode = function(identifiers, expr) {
-  return {
-    tag: AST.LAMBDA_ABSTRACTION,
-    args: identifiers,
-    body: expr,
-    accept: acceptor
-  };
-};
-
-applicationNode = function(args) {
-  return {
-    tag: AST.APPLICATION,
-    args: args,
-    accept: acceptor
-  };
-};
-
-definitionNode = function(idToken, expr) {
-  return {
-    tag: AST.DEFINITION,
-    token: idToken,
-    body: expr,
-    accept: acceptor
-  };
-};
-
-parseIdentifier = function(lexer) {
-  var rewind, token;
+parseApplication = function(lexer) {
+  var expr, exprs, rewind, rewindInner;
   rewind = lexer.memento();
-  token = lexer.next();
-  if (token.tag === TOKEN.IDENTIFIER) {
-    return identifierNode(token);
+  rewindInner = lexer.memento();
+  exprs = [];
+  while (true) {
+    rewindInner = lexer.memento();
+    if (!(expr = parseExpr(lexer))) {
+      break;
+    }
+    exprs.push(expr);
+  }
+  rewindInner();
+  if (exprs.length > 0) {
+    return applicationNode(exprs);
   }
   return rewind();
 };
 
+parseExpr = function(lexer) {
+  return parseApplicationWithBrackets(lexer) || parseLambdaAbstraction(lexer) || parseDefinition(lexer) || parseIdentifier(lexer);
+};
+
+parseApplicationWithBrackets = function(lexer) {
+  var app, rewind, token;
+  rewind = lexer.memento();
+  token = lexer.next();
+  if (token.tag !== TOKEN.BRACKETS_OPEN) {
+    return rewind();
+  }
+  app = parseApplication(lexer);
+  if (app == null) {
+    return rewind();
+  }
+  token = lexer.next();
+  if (token.tag !== TOKEN.BRACKETS_CLOSE) {
+    return rewind();
+  }
+  return app;
+};
+
 parseLambdaAbstraction = function(lexer) {
-  var expr, identifiers, rewind, token;
+  var app, identifiers, rewind, token;
   rewind = lexer.memento();
   token = lexer.next();
   if (token.tag !== TOKEN.LAMBDA) {
@@ -244,48 +245,15 @@ parseLambdaAbstraction = function(lexer) {
   if (identifiers.length === 0 || token.tag !== TOKEN.LAMBDA_BODY) {
     return rewind();
   }
-  expr = parseExpr(lexer);
-  if (expr != null) {
-    return lambdaAbstractionNode(identifiers, expr);
-  }
-  return rewind();
-};
-
-parseApplication = function(lexer) {
-  var args, expr, idNode, rewind, rewindInner, token;
-  rewind = lexer.memento();
-  rewindInner = lexer.memento();
-  args = [];
-  while (true) {
-    rewindInner = lexer.memento();
-    idNode = parseIdentifier(lexer);
-    if (idNode != null) {
-      args.push(idNode);
-      continue;
-    }
-    token = lexer.next();
-    if (token.tag !== TOKEN.BRACKETS_OPEN) {
-      break;
-    }
-    expr = parseExpr(lexer);
-    if (expr == null) {
-      break;
-    }
-    token = lexer.next();
-    if (token.tag !== TOKEN.BRACKETS_CLOSE) {
-      break;
-    }
-    args.push(expr);
-  }
-  rewindInner();
-  if (args.length > 1) {
-    return applicationNode(args);
+  app = parseApplication(lexer);
+  if (app != null) {
+    return lambdaAbstractionNode(identifiers, app);
   }
   return rewind();
 };
 
 parseDefinition = function(lexer) {
-  var expr, idToken, rewind, token;
+  var app, idToken, rewind, token;
   rewind = lexer.memento();
   idToken = lexer.next();
   if (idToken.tag !== TOKEN.IDENTIFIER) {
@@ -295,46 +263,60 @@ parseDefinition = function(lexer) {
   if (token.tag !== TOKEN.DEF_OP) {
     return rewind();
   }
-  expr = parseExpr(lexer);
-  if (expr != null) {
-    return definitionNode(idToken, expr);
+  app = parseApplication(lexer);
+  if (app != null) {
+    return definitionNode(idToken, app);
   }
   return rewind();
 };
 
-parseExprWithBrackets = function(lexer) {
-  var expr, rewind, token;
+parseIdentifier = function(lexer) {
+  var rewind, token;
   rewind = lexer.memento();
   token = lexer.next();
-  if (token.tag !== TOKEN.BRACKETS_OPEN) {
-    return rewind();
-  }
-  expr = parseExpr(lexer);
-  if (expr == null) {
-    return rewind();
-  }
-  token = lexer.next();
-  if (token.tag === TOKEN.BRACKETS_CLOSE) {
-    return expr;
+  if (token.tag === TOKEN.IDENTIFIER) {
+    return identifierNode(token);
   }
   return rewind();
 };
 
-parseExpr = function(lexer) {
-  return parseExprWithBrackets(lexer) || parseDefinition(lexer) || parseApplication(lexer) || parseLambdaAbstraction(lexer) || parseIdentifier(lexer);
+acceptor = function(visitor) {
+  var base, name;
+  return typeof (base = visitor.visit)[name = this.tag] === "function" ? base[name](this) : void 0;
 };
 
-parse = function(lexer) {
-  var expr, exprs;
-  exprs = [];
-  while ((expr = parseExpr(lexer)) != null) {
-    exprs.push(expr);
-  }
-  return exprs;
+applicationNode = function(exprs) {
+  return {
+    tag: AST.APPLICATION,
+    exprs: exprs,
+    accept: acceptor
+  };
 };
 
-module.exports = {
-  parse: parse
+lambdaAbstractionNode = function(args, app) {
+  return {
+    tag: AST.LAMBDA_ABSTRACTION,
+    args: args,
+    body: app,
+    accept: acceptor
+  };
+};
+
+definitionNode = function(idToken, app) {
+  return {
+    tag: AST.DEFINITION,
+    token: idToken,
+    body: app,
+    accept: acceptor
+  };
+};
+
+identifierNode = function(idToken) {
+  return {
+    tag: AST.IDENTIFIER,
+    token: idToken,
+    accept: acceptor
+  };
 };
 
 
@@ -506,8 +488,12 @@ exports.create = function() {
   self = {
     visit: visit
   };
-  visit[AST.IDENTIFIER] = function(node) {
-    return node.token.value;
+  visit[AST.APPLICATION] = function(node) {
+    var res;
+    res = node.exprs.reduce((function(p, c) {
+      return "(" + p + ")(" + (c.accept(self)) + ")";
+    }), "\\dummy\\");
+    return res.split("(\\dummy\\)").join("");
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
     var res, template;
@@ -518,15 +504,11 @@ exports.create = function() {
     });
     return res.split("%body%").join(node.body.accept(self));
   };
-  visit[AST.APPLICATION] = function(node) {
-    var res;
-    res = node.args.reduce((function(p, c) {
-      return "(" + p + ")(" + (c.accept(self)) + ")";
-    }), "\\dummy\\");
-    return res.split("(\\dummy\\)").join("");
-  };
   visit[AST.DEFINITION] = function(node) {
     return "var " + node.token.value + " = (" + (node.body.accept(self)) + ");";
+  };
+  visit[AST.IDENTIFIER] = function(node) {
+    return node.token.value;
   };
   return self;
 };
@@ -545,8 +527,10 @@ exports.create = function() {
   self = {
     visit: visit
   };
-  visit[AST.IDENTIFIER] = function(node) {
-    return node.token.value;
+  visit[AST.APPLICATION] = function(node) {
+    return node.exprs.map(function(expr) {
+      return expr.accept(self);
+    });
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
     return {
@@ -556,16 +540,14 @@ exports.create = function() {
       body: node.body.accept(self)
     };
   };
-  visit[AST.APPLICATION] = function(node) {
-    return node.args.map(function(expr) {
-      return expr.accept(self);
-    });
-  };
   visit[AST.DEFINITION] = function(node) {
     return {
       name: node.token.value,
       body: node.body.accept(self)
     };
+  };
+  visit[AST.IDENTIFIER] = function(node) {
+    return node.token.value;
   };
   return self;
 };
@@ -574,11 +556,11 @@ exports.create = function() {
 
 },{"AST":2}],11:[function(require,module,exports){
 "use strict";
-var AST, create;
+var AST;
 
 AST = require("AST");
 
-create = function(reporter, tab) {
+exports.create = function(reporter, tab) {
   var depth, indent, puts, self, visit;
   if (tab == null) {
     tab = "  ";
@@ -598,10 +580,17 @@ create = function(reporter, tab) {
   self = {
     visit: visit
   };
-  visit[AST.IDENTIFIER] = function(node) {
-    puts(AST.IDENTIFIER);
+  visit[AST.APPLICATION] = function(node) {
+    puts(AST.APPLICATION);
     return indent(function() {
-      return puts(node.token.value);
+      var expr, i, len, ref, results;
+      ref = node.exprs;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        expr = ref[i];
+        results.push(expr.accept(self));
+      }
+      return results;
     });
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
@@ -624,19 +613,6 @@ create = function(reporter, tab) {
       });
     });
   };
-  visit[AST.APPLICATION] = function(node) {
-    puts(AST.APPLICATION);
-    return indent(function() {
-      var expr, i, len, ref, results;
-      ref = node.args;
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        expr = ref[i];
-        results.push(expr.accept(self));
-      }
-      return results;
-    });
-  };
   visit[AST.DEFINITION] = function(node) {
     puts(AST.DEFINITION);
     return indent(function() {
@@ -650,11 +626,13 @@ create = function(reporter, tab) {
       });
     });
   };
+  visit[AST.IDENTIFIER] = function(node) {
+    puts(AST.IDENTIFIER);
+    return indent(function() {
+      return puts(node.token.value);
+    });
+  };
   return self;
-};
-
-module.exports = {
-  create: create
 };
 
 
