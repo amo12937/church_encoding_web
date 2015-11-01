@@ -74,7 +74,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":6,"tokenizer":8,"views/append_examples":9,"visitor/js_visitor":10,"visitor/json_visitor":11,"visitor/tree_view_visitor":12}],2:[function(require,module,exports){
+},{"parser":7,"tokenizer":9,"views/append_examples":10,"visitor/js_visitor":11,"visitor/json_visitor":12,"visitor/tree_view_visitor":13}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -89,7 +89,7 @@ module.exports = prefixedKV("AST", {
 
 
 
-},{"prefixed_kv":7}],3:[function(require,module,exports){
+},{"prefixed_kv":8}],3:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -112,13 +112,90 @@ module.exports = prefixedKV("TOKEN", {
 
 
 
-},{"prefixed_kv":7}],4:[function(require,module,exports){
+},{"prefixed_kv":8}],4:[function(require,module,exports){
 "use strict";
-module.exports = [[0, "p0     := \\f x.x", ["p0 = (f) -> (x) -> x"]], [1, "p1     := \\f x.f x", ["p1 = (f) -> (x) -> (f)(x)"]], [2, "p2     := \\f x.f (f x)", ["p2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "true   := \\x y.x", ["true = (x) -> (y) -> x"]], [6, "false  := \\x y.y", ["false = (x) -> (y) -> y"]], [7, "and    := \\p q x y.p (q x y) y", ["and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [8, "or     := \\p q x y.p x (q x y)", ["or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [9, "not    := \\p x y.p y x", ["not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [10, "if     := \\p x y.p x y", ["if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [11, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> false))(true)"]], [12, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [13, "first  := \\p.p true", ["first = (p) -> (p)(true)"]], [14, "second := \\p.p false", ["second = (p) -> (p)(false)"]], [15, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [16, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]]];
+var CS_KEYWORDS, JS_KEYWORDS;
+
+JS_KEYWORDS = {
+  "break": "break",
+  "case": "case",
+  "catch": "catch",
+  "const": "const",
+  "continue": "continue",
+  "debugger": "debugger",
+  "default": "default",
+  "delete": "delete",
+  "do": "do",
+  "else": "else",
+  "enum": "enum",
+  "export": "export",
+  "false": "false",
+  "finally": "finally",
+  "for": "for",
+  "function": "function",
+  "if": "if",
+  "implements": "implements",
+  "import": "import",
+  "in": "in",
+  "instanceof": "instanceof",
+  "interface": "interface",
+  "let": "let",
+  "native": "native",
+  "new": "new",
+  "null": "null",
+  "package": "package",
+  "private": "private",
+  "protected": "protected",
+  "public": "public",
+  "return": "return",
+  "static": "static",
+  "switch": "switch",
+  "this": "this",
+  "throw": "throw",
+  "true": "true",
+  "try": "try",
+  "typeof": "typeof",
+  "undefined": "undefined",
+  "var": "var",
+  "void": "void",
+  "while": "while",
+  "with": "with",
+  "yield": "yield"
+};
+
+CS_KEYWORDS = {
+  "and": "and",
+  "by": "by",
+  "is": "is",
+  "isnt": "isnt",
+  "loop": "loop",
+  "no": "no",
+  "not": "not",
+  "of": "of",
+  "off": "off",
+  "on": "on",
+  "or": "or",
+  "then": "then",
+  "unless": "unless",
+  "until": "until",
+  "when": "when",
+  "yes": "yes"
+};
+
+module.exports = {
+  JS_KEYWORDS: JS_KEYWORDS,
+  CS_KEYWORDS: CS_KEYWORDS
+};
 
 
 
 },{}],5:[function(require,module,exports){
+"use strict";
+module.exports = [[0, "0      := \\f x.x", ["$0 = (f) -> (x) -> x"]], [1, "1      := \\f x.f x", ["$1 = (f) -> (x) -> (f)(x)"]], [2, "2      := \\f x.f (f x)", ["$2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "true   := \\x y.x", ["$true = (x) -> (y) -> x"]], [6, "false  := \\x y.y", ["$false = (x) -> (y) -> y"]], [7, "and    := \\p q x y.p (q x y) y", ["$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [8, "or     := \\p q x y.p x (q x y)", ["$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [9, "not    := \\p x y.p y x", ["$not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [10, "if     := \\p x y.p x y", ["$if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [11, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> $false))($true)"]], [12, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [13, "first  := \\p.p true", ["first = (p) -> (p)($true)"]], [14, "second := \\p.p false", ["second = (p) -> (p)($false)"]], [15, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [16, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]]];
+
+
+
+},{}],6:[function(require,module,exports){
 "use strict";
 var create;
 
@@ -151,7 +228,7 @@ module.exports = {
 
 
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline;
 
@@ -316,7 +393,7 @@ identifierNode = function(idToken) {
 
 
 
-},{"AST":2,"TOKEN":3}],7:[function(require,module,exports){
+},{"AST":2,"TOKEN":3}],8:[function(require,module,exports){
 "use strict";
 module.exports = (function() {
   var prefixedKV;
@@ -338,7 +415,7 @@ module.exports = (function() {
 
 
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
 
@@ -473,7 +550,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":5}],9:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":6}],10:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -498,12 +575,23 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":4}],10:[function(require,module,exports){
+},{"examples":5}],11:[function(require,module,exports){
 "use strict";
-var AST,
+var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier,
   slice = [].slice;
 
 AST = require("AST");
+
+JS_KEYWORDS = require("constant").JS_KEYWORDS;
+
+NUMBER = "0123456789";
+
+normalizeIdentifier = function(s) {
+  if ((JS_KEYWORDS[s] != null) || (NUMBER[s[0]] != null)) {
+    return "$" + s;
+  }
+  return s;
+};
 
 exports.create = function() {
   var self, visit;
@@ -527,22 +615,22 @@ exports.create = function() {
     template = "function (%arg%) { return %body%; }";
     res = "%body%";
     node.args.forEach(function(id) {
-      return res = res.split("%body%").join(template.split("%arg%").join(id.value));
+      return res = res.split("%body%").join(template.split("%arg%").join(normalizeIdentifier(id.value)));
     });
     return res.split("%body%").join(node.body.accept(self));
   };
   visit[AST.DEFINITION] = function(node) {
-    return "var " + node.token.value + " = " + (node.body.accept(self)) + ";";
+    return "var " + (normalizeIdentifier(node.token.value)) + " = " + (node.body.accept(self)) + ";";
   };
   visit[AST.IDENTIFIER] = function(node) {
-    return node.token.value;
+    return normalizeIdentifier(node.token.value);
   };
   return self;
 };
 
 
 
-},{"AST":2}],11:[function(require,module,exports){
+},{"AST":2,"constant":4}],12:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -581,7 +669,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],12:[function(require,module,exports){
+},{"AST":2}],13:[function(require,module,exports){
 "use strict";
 var AST;
 
