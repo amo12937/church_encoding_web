@@ -191,7 +191,7 @@ module.exports = {
 
 },{}],5:[function(require,module,exports){
 "use strict";
-module.exports = [[0, "0      := \\f x.x", ["$0 = (f) -> (x) -> x"]], [1, "1      := \\f x.f x", ["$1 = (f) -> (x) -> (f)(x)"]], [2, "2      := \\f x.f (f x)", ["$2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "true   := \\x y.x", ["$true = (x) -> (y) -> x"]], [6, "false  := \\x y.y", ["$false = (x) -> (y) -> y"]], [7, "and    := \\p q x y.p (q x y) y", ["$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [8, "or     := \\p q x y.p x (q x y)", ["$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [9, "not    := \\p x y.p y x", ["$not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [10, "if     := \\p x y.p x y", ["$if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [11, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> $false))($true)"]], [12, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [13, "first  := \\p.p true", ["first = (p) -> (p)($true)"]], [14, "second := \\p.p false", ["second = (p) -> (p)($false)"]], [15, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [16, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]]];
+module.exports = [[0, "0      := \\f x.x", ["$_0 = (f) -> (x) -> x"]], [1, "1      := \\f x.f x", ["$_1 = (f) -> (x) -> (f)(x)"]], [2, "2      := \\f x.f (f x)", ["$_2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "add    := \\m n f x.m f (n f x)", ["add = (m) -> (n) -> (f) -> (x) -> ((m)(f))(((n)(f))(x))"]], [6, "mul    := \\m n f.m (n f)", ["mul = (m) -> (n) -> (f) -> (m)((n)(f))"]], [7, "exp    := \\m n.n m", ["exp = (m) -> (n) -> (n)(m)"]], [8, "true   := \\x y.x", ["$true = (x) -> (y) -> x"]], [9, "false  := \\x y.y", ["$false = (x) -> (y) -> y"]], [10, "and    := \\p q x y.p (q x y) y", ["$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [11, "or     := \\p q x y.p x (q x y)", ["$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [12, "not    := \\p x y.p y x", ["$not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [13, "if     := \\p x y.p x y", ["$if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [14, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> $false))($true)"]], [15, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [16, "first  := \\p.p true", ["first = (p) -> (p)($true)"]], [17, "second := \\p.p false", ["second = (p) -> (p)($false)"]], [18, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [19, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]], [20, "fact   := \\f n.if (isZero n) 1 (mul n (f (pred n)))", ["fact = (f) -> (n) -> ((($if)((isZero)(n)))($_1))(((mul)(n))((f)((pred)(n))))"]]];
 
 
 
@@ -587,8 +587,11 @@ JS_KEYWORDS = require("constant").JS_KEYWORDS;
 NUMBER = "0123456789";
 
 normalizeIdentifier = function(s) {
-  if ((JS_KEYWORDS[s] != null) || (NUMBER[s[0]] != null)) {
+  if (JS_KEYWORDS[s] != null) {
     return "$" + s;
+  }
+  if (NUMBER[s[0]] != null) {
+    return "$_" + s;
   }
   return s;
 };
