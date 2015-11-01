@@ -62,8 +62,8 @@ window.addEventListener("load", function() {
     seed = $examples.getAttribute("data-seed");
     key = $examples.getAttribute("data-key");
     $fragment = examplesAppender.createFragment(document, seed, key, function(example) {
-      $input.value = example;
-      return compile(example);
+      $input.value = ((($input.value || "").trim()) + "\n" + example).trim();
+      return compile($input.value);
     });
     return $examples.appendChild($fragment);
   })();
@@ -114,7 +114,7 @@ module.exports = prefixedKV("TOKEN", {
 
 },{"prefixed_kv":7}],4:[function(require,module,exports){
 "use strict";
-module.exports = [[0, "p0     := \\f x.x", ["p0 = (f) -> (x) -> x"]], [1, "p1     := \\f x.f x", ["p1 = (f) -> (x) -> (f)(x)"]], [2, "p2     := \\f x.f (f x)", ["p2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "true   := \\x y.x", ["true = (x) -> (y) -> x"]], [6, "false  := \\x y.y", ["false = (x) -> (y) -> y"]], [7, "and    := \\p q x y.p (q x y) y", ["and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [8, "or     := \\p q x y.p x (q x y)", ["or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [9, "not    := \\p x y.p y x", ["not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [10, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [11, "first  := \\p.p true", ["first = (p) -> (p)(true)"]], [12, "second := \\p.p false", ["second = (p) -> (p)(false)"]], [13, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]]];
+module.exports = [[0, "p0     := \\f x.x", ["p0 = (f) -> (x) -> x"]], [1, "p1     := \\f x.f x", ["p1 = (f) -> (x) -> (f)(x)"]], [2, "p2     := \\f x.f (f x)", ["p2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "true   := \\x y.x", ["true = (x) -> (y) -> x"]], [6, "false  := \\x y.y", ["false = (x) -> (y) -> y"]], [7, "and    := \\p q x y.p (q x y) y", ["and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [8, "or     := \\p q x y.p x (q x y)", ["or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [9, "not    := \\p x y.p y x", ["not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [10, "if     := \\p x y.p x y", ["if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [11, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> false))(true)"]], [12, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [13, "first  := \\p.p true", ["first = (p) -> (p)(true)"]], [14, "second := \\p.p false", ["second = (p) -> (p)(false)"]], [15, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [16, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]]];
 
 
 
@@ -153,17 +153,32 @@ module.exports = {
 
 },{}],6:[function(require,module,exports){
 "use strict";
-var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction;
+var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline;
 
 TOKEN = require("TOKEN");
 
 AST = require("AST");
 
 exports.parse = function(lexer) {
-  var app, apps;
+  return parseMultiline(lexer);
+};
+
+parseMultiline = function(lexer) {
+  var app, apps, rewind, rewindInner, token;
+  rewind = lexer.memento();
+  rewindInner = lexer.memento();
   apps = [];
-  while (app = parseApplication(lexer)) {
-    apps.push(app);
+  while (true) {
+    if (app = parseApplication(lexer)) {
+      apps.push(app);
+    }
+    rewindInner = lexer.memento;
+    token = lexer.next();
+    if (token.tag === TOKEN.LINE_BREAK) {
+      continue;
+    }
+    rewindInner();
+    break;
   }
   return apps;
 };
