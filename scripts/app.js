@@ -106,7 +106,8 @@ module.exports = prefixedKV("TOKEN", {
   "INDENT": "INDENT",
   "EOF": "EOF",
   ERROR: {
-    "UNKNOWN_TOKEN": "UNKNOWN_TOKEN"
+    "UNKNOWN_TOKEN": "UNKNOWN_TOKEN",
+    "UNMATCHED_BRACKET": "UNMATCHED_BRACKET"
   }
 });
 
@@ -417,20 +418,24 @@ module.exports = (function() {
 
 },{}],9:[function(require,module,exports){
 "use strict";
-var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
+var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
 
 TOKEN = require("TOKEN");
 
 mementoContainer = require("memento_container");
 
 exports.tokenize = function(code) {
-  var addToken, column, consumed, context, i, line, ref, tokens;
+  var addToken, brackets, column, consumed, context, i, latestBracket, line, popBracket, pushBracket, ref, tokens;
   code = cleanCode(code);
   tokens = [];
   line = 0;
   column = 0;
-  addToken = function(tag, value) {
+  brackets = [];
+  addToken = function(tag, value, length) {
     var token;
+    if (length == null) {
+      length = value.length;
+    }
     token = {
       tag: tag,
       value: value,
@@ -438,12 +443,27 @@ exports.tokenize = function(code) {
       column: column
     };
     tokens.push(token);
-    return token;
+    return length;
+  };
+  pushBracket = function(b) {
+    return brackets.push(b);
+  };
+  popBracket = function() {
+    return brackets.pop();
+  };
+  latestBracket = function() {
+    return brackets[brackets.length - 1];
   };
   context = {
     code: code,
     chunk: code,
-    addToken: addToken
+    parenthesisStack: [],
+    addToken: addToken,
+    brackets: {
+      push: pushBracket,
+      pop: popBracket,
+      latest: latestBracket
+    }
   };
   i = 0;
   while (context.chunk = code.slice(i)) {
@@ -484,14 +504,25 @@ lineToken = function(c) {
   if (!(match = c.chunk.match(MULTI_DENT))) {
     return 0;
   }
-  c.addToken(TOKEN.LINE_BREAK, "\n");
-  return match[0].length;
+  if (c.brackets.latest() != null) {
+    return match[0].length;
+  }
+  return c.addToken(TOKEN.LINE_BREAK, "\n", match[0].length);
 };
 
 LITERAL_CHAR = {
   "\\": TOKEN.LAMBDA,
-  ".": TOKEN.LAMBDA_BODY,
-  "(": TOKEN.BRACKETS_OPEN,
+  ".": TOKEN.LAMBDA_BODY
+};
+
+LITERAL_OPENER = {
+  "(": {
+    token: TOKEN.BRACKETS_OPEN,
+    opposite: ")"
+  }
+};
+
+LITERAL_CLOSER = {
   ")": TOKEN.BRACKETS_CLOSE
 };
 
@@ -501,13 +532,24 @@ LITERAL_CHAR2 = {
 
 literalToken = function(c) {
   var t, v;
-  if ((t = LITERAL_CHAR[v = c.chunk[0]]) != null) {
-    c.addToken(t, v);
-    return 1;
+  v = c.chunk[0];
+  if ((t = LITERAL_CHAR[v]) != null) {
+    return c.addToken(t, v);
   }
-  if ((t = LITERAL_CHAR2[v = c.chunk.slice(0, 2)]) != null) {
-    c.addToken(t, v);
-    return 2;
+  if ((t = LITERAL_OPENER[v]) != null) {
+    c.brackets.push(t.opposite);
+    return c.addToken(t.token, v);
+  }
+  if ((t = LITERAL_CLOSER[v]) != null) {
+    if (c.brackets.latest() !== v) {
+      return c.addToken(TOKEN.ERROR.UNMATCHED_BRACKET, v);
+    }
+    c.brackets.pop();
+    return c.addToken(t, v);
+  }
+  v = c.chunk.slice(0, 2);
+  if ((t = LITERAL_CHAR2[v]) != null) {
+    return c.addToken(t, v);
   }
   return 0;
 };
