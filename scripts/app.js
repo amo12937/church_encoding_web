@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var createResultFragment, examplesAppender, jsVisitor, jsVisitorProvider, jsonVisitorProvider, parser, reporter, tokenizer, visitor, visitorProvider;
+var createResultFragment, examplesAppender, jsVisitor, jsVisitorProvider, parser, reporter, toStringVisitor, toStringVisitorProvider, tokenizer, visitor, visitorProvider;
 
 tokenizer = require("tokenizer");
 
@@ -8,9 +8,9 @@ parser = require("parser");
 
 visitorProvider = require("visitor/tree_view_visitor");
 
-jsonVisitorProvider = require("visitor/json_visitor");
-
 jsVisitorProvider = require("visitor/js_visitor");
+
+toStringVisitorProvider = require("visitor/to_string_visitor");
 
 examplesAppender = require("views/append_examples");
 
@@ -21,6 +21,8 @@ reporter = {
 visitor = visitorProvider.create(reporter);
 
 jsVisitor = jsVisitorProvider.create();
+
+toStringVisitor = toStringVisitorProvider.create();
 
 createResultFragment = function(d, results) {
   var $fragment;
@@ -40,21 +42,17 @@ window.addEventListener("load", function() {
   $input = document.getElementById("input");
   $result = document.getElementById("result");
   compile = function(code) {
-    var $fragment, expr, i, len, lexer, results;
+    var $fragment, lexer, result;
     console.time("tokenizer");
     lexer = tokenizer.tokenize(code);
     console.timeEnd("tokenizer");
     console.time("parser");
-    results = parser.parse(lexer);
+    result = parser.parse(lexer);
     console.timeEnd("parser");
-    for (i = 0, len = results.length; i < len; i++) {
-      expr = results[i];
-      expr.accept(visitor);
-    }
+    result.accept(visitor);
+    reporter.report(result.accept(toStringVisitor));
     $result.textContent = null;
-    $fragment = createResultFragment(document, results.map(function(expr) {
-      return expr.accept(jsVisitor);
-    }));
+    $fragment = createResultFragment(document, result.accept(jsVisitor));
     return $result.appendChild($fragment);
   };
   (function() {
@@ -74,17 +72,18 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":7,"tokenizer":9,"views/append_examples":10,"visitor/js_visitor":11,"visitor/json_visitor":12,"visitor/tree_view_visitor":13}],2:[function(require,module,exports){
+},{"parser":7,"tokenizer":9,"views/append_examples":10,"visitor/js_visitor":11,"visitor/to_string_visitor":12,"visitor/tree_view_visitor":13}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
 prefixedKV = require("prefixed_kv");
 
 module.exports = prefixedKV("AST", {
-  "IDENTIFIER": "IDENTIFIER",
-  "LAMBDA_ABSTRACTION": "LAMBDA_ABSTRACTION",
+  "LIST": "LIST",
   "APPLICATION": "APPLICATION",
-  "DEFINITION": "DEFINITION"
+  "LAMBDA_ABSTRACTION": "LAMBDA_ABSTRACTION",
+  "DEFINITION": "DEFINITION",
+  "IDENTIFIER": "IDENTIFIER"
 });
 
 
@@ -231,7 +230,7 @@ module.exports = {
 
 },{}],7:[function(require,module,exports){
 "use strict";
-var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline;
+var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline;
 
 TOKEN = require("TOKEN");
 
@@ -258,7 +257,7 @@ parseMultiline = function(lexer) {
     rewindInner();
     break;
   }
-  return apps;
+  return listNode(apps);
 };
 
 parseApplication = function(lexer) {
@@ -356,6 +355,14 @@ parseIdentifier = function(lexer) {
 acceptor = function(visitor) {
   var base, name;
   return typeof (base = visitor.visit)[name = this.tag] === "function" ? base[name](this) : void 0;
+};
+
+listNode = function(exprs) {
+  return {
+    tag: AST.LIST,
+    exprs: exprs,
+    accept: acceptor
+  };
 };
 
 applicationNode = function(exprs) {
@@ -644,6 +651,11 @@ exports.create = function() {
   self = {
     visit: visit
   };
+  visit[AST.LIST] = function(node) {
+    return node.exprs.map(function(expr) {
+      return expr.accept(self);
+    });
+  };
   visit[AST.APPLICATION] = function(node) {
     var first, others, ref, s;
     ref = node.exprs, first = ref[0], others = 2 <= ref.length ? slice.call(ref, 1) : [];
@@ -687,24 +699,31 @@ exports.create = function() {
   self = {
     visit: visit
   };
-  visit[AST.APPLICATION] = function(node) {
+  visit[AST.LIST] = function(node) {
     return node.exprs.map(function(expr) {
       return expr.accept(self);
-    });
+    }).join("\n");
+  };
+  visit[AST.APPLICATION] = function(node) {
+    var tmp;
+    if (node.exprs.length === 1) {
+      return node.exprs[0].accept(self);
+    }
+    tmp = node.exprs.map(function(expr) {
+      return "" + (expr.accept(self));
+    }).join(" ");
+    return "(" + tmp + ")";
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    return {
-      args: node.args.map(function(id) {
-        return id.value;
-      }),
-      body: node.body.accept(self)
-    };
+    var args, body;
+    args = node.args.map(function(id) {
+      return id.value;
+    }).join(" ");
+    body = node.body.accept(self);
+    return "(\\" + args + "." + body + ")";
   };
   visit[AST.DEFINITION] = function(node) {
-    return {
-      name: node.token.value,
-      body: node.body.accept(self)
-    };
+    return node.token.value + " := " + (node.body.accept(self));
   };
   visit[AST.IDENTIFIER] = function(node) {
     return node.token.value;
@@ -739,6 +758,11 @@ exports.create = function(reporter, tab) {
   visit = {};
   self = {
     visit: visit
+  };
+  visit[AST.LIST] = function(node) {
+    return node.exprs.map(function(expr) {
+      return expr.accept(self);
+    });
   };
   visit[AST.APPLICATION] = function(node) {
     puts(AST.APPLICATION);
