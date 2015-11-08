@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var createResultFragment, examplesAppender, jsVisitor, jsVisitorProvider, parser, reporter, toStringVisitor, toStringVisitorProvider, tokenizer, visitor, visitorProvider;
+var createResultFragment, examplesAppender, interpreter, interpreterProvider, jsVisitor, jsVisitorProvider, parser, reporter, toStringVisitor, toStringVisitorProvider, tokenizer, visitor, visitorProvider;
 
 tokenizer = require("tokenizer");
 
@@ -11,6 +11,8 @@ visitorProvider = require("visitor/tree_view_visitor");
 jsVisitorProvider = require("visitor/js_visitor");
 
 toStringVisitorProvider = require("visitor/to_string_visitor");
+
+interpreterProvider = require("visitor/interpreter");
 
 examplesAppender = require("views/append_examples");
 
@@ -23,6 +25,8 @@ visitor = visitorProvider.create(reporter);
 jsVisitor = jsVisitorProvider.create();
 
 toStringVisitor = toStringVisitorProvider.create();
+
+interpreter = interpreterProvider.create(reporter);
 
 createResultFragment = function(d, results) {
   var $fragment;
@@ -49,8 +53,7 @@ window.addEventListener("load", function() {
     console.time("parser");
     result = parser.parse(lexer);
     console.timeEnd("parser");
-    result.accept(visitor);
-    reporter.report(result.accept(toStringVisitor));
+    interpreter.run(result);
     $result.textContent = null;
     $fragment = createResultFragment(document, result.accept(jsVisitor));
     return $result.appendChild($fragment);
@@ -72,7 +75,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":7,"tokenizer":9,"views/append_examples":10,"visitor/js_visitor":11,"visitor/to_string_visitor":12,"visitor/tree_view_visitor":13}],2:[function(require,module,exports){
+},{"parser":8,"tokenizer":10,"views/append_examples":11,"visitor/interpreter":12,"visitor/js_visitor":13,"visitor/to_string_visitor":14,"visitor/tree_view_visitor":15}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -88,7 +91,7 @@ module.exports = prefixedKV("AST", {
 
 
 
-},{"prefixed_kv":8}],3:[function(require,module,exports){
+},{"prefixed_kv":9}],3:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -112,7 +115,7 @@ module.exports = prefixedKV("TOKEN", {
 
 
 
-},{"prefixed_kv":8}],4:[function(require,module,exports){
+},{"prefixed_kv":9}],4:[function(require,module,exports){
 "use strict";
 var CS_KEYWORDS, JS_KEYWORDS;
 
@@ -191,11 +194,42 @@ module.exports = {
 
 },{}],5:[function(require,module,exports){
 "use strict";
-module.exports = [[0, "0      := \\f x.x", ["$_0 = (f) -> (x) -> x"]], [1, "1      := \\f x.f x", ["$_1 = (f) -> (x) -> (f)(x)"]], [2, "2      := \\f x.f (f x)", ["$_2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "add    := \\m n f x.m f (n f x)", ["add = (m) -> (n) -> (f) -> (x) -> ((m)(f))(((n)(f))(x))"]], [6, "mul    := \\m n f.m (n f)", ["mul = (m) -> (n) -> (f) -> (m)((n)(f))"]], [7, "exp    := \\m n.n m", ["exp = (m) -> (n) -> (n)(m)"]], [8, "true   := \\x y.x", ["$true = (x) -> (y) -> x"]], [9, "false  := \\x y.y", ["$false = (x) -> (y) -> y"]], [10, "and    := \\p q x y.p (q x y) y", ["$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [11, "or     := \\p q x y.p x (q x y)", ["$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [12, "not    := \\p x y.p y x", ["$not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [13, "if     := \\p x y.p x y", ["$if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [14, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> $false))($true)"]], [15, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [16, "first  := \\p.p true", ["first = (p) -> (p)($true)"]], [17, "second := \\p.p false", ["second = (p) -> (p)($false)"]], [18, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [19, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]], [20, "fact   := \\f n.if (isZero n) 1 (\\x.mul n (f (pred n)) x)", ["fact = (f) -> (n) -> ((($if)((isZero)(n)))($_1))((x) -> (((mul)(n))((f)((pred)(n))))(x))"]]];
+var CEK;
+
+exports.CHILD_ENV_KEY = CEK = ">";
+
+exports.create = function() {
+  var Env, current, global;
+  Env = function() {
+    return void 0;
+  };
+  global = new Env;
+  current = global;
+  Env.prototype[CEK] = function(f) {
+    var old, result;
+    old = current;
+    Env.prototype = this;
+    current = new Env;
+    result = f(current);
+    current = old;
+    return result;
+  };
+  return {
+    getCurrent: function() {
+      return current;
+    }
+  };
+};
 
 
 
 },{}],6:[function(require,module,exports){
+"use strict";
+module.exports = [[0, "0      := \\f x.x", ["$_0 = (f) -> (x) -> x"]], [1, "1      := \\f x.f x", ["$_1 = (f) -> (x) -> (f)(x)"]], [2, "2      := \\f x.f (f x)", ["$_2 = (f) -> (x) -> (f)((f)(x))"]], [3, "succ   := \\n f x.f (n f x)", ["succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"]], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", ["pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"]], [5, "add    := \\m n f x.m f (n f x)", ["add = (m) -> (n) -> (f) -> (x) -> ((m)(f))(((n)(f))(x))"]], [6, "mul    := \\m n f.m (n f)", ["mul = (m) -> (n) -> (f) -> (m)((n)(f))"]], [7, "exp    := \\m n.n m", ["exp = (m) -> (n) -> (n)(m)"]], [8, "true   := \\x y.x", ["$true = (x) -> (y) -> x"]], [9, "false  := \\x y.y", ["$false = (x) -> (y) -> y"]], [10, "and    := \\p q x y.p (q x y) y", ["$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"]], [11, "or     := \\p q x y.p x (q x y)", ["$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"]], [12, "not    := \\p x y.p y x", ["$not = (p) -> (x) -> (y) -> ((p)(y))(x)"]], [13, "if     := \\p x y.p x y", ["$if = (p) -> (x) -> (y) -> ((p)(x))(y)"]], [14, "isZero := \\n.n (\\x. false) true", ["isZero = (n) -> ((n)((x) -> $false))($true)"]], [15, "pair   := \\a b p.p a b", ["pair = (a) -> (b) -> (p) -> ((p)(a))(b)"]], [16, "first  := \\p.p true", ["first = (p) -> (p)($true)"]], [17, "second := \\p.p false", ["second = (p) -> (p)($false)"]], [18, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", ["Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"]], [19, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", ["Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"]], [20, "fact   := \\f n.if (isZero n) 1 (\\x.mul n (f (pred n)) x)", ["fact = (f) -> (n) -> ((($if)((isZero)(n)))($_1))((x) -> (((mul)(n))((f)((pred)(n))))(x))"]]];
+
+
+
+},{}],7:[function(require,module,exports){
 "use strict";
 var create;
 
@@ -228,7 +262,7 @@ module.exports = {
 
 
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline;
 
@@ -401,7 +435,7 @@ identifierNode = function(idToken) {
 
 
 
-},{"AST":2,"TOKEN":3}],8:[function(require,module,exports){
+},{"AST":2,"TOKEN":3}],9:[function(require,module,exports){
 "use strict";
 module.exports = (function() {
   var prefixedKV;
@@ -423,7 +457,7 @@ module.exports = (function() {
 
 
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
 
@@ -599,7 +633,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":6}],10:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":7}],11:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -624,7 +658,126 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":5}],11:[function(require,module,exports){
+},{"examples":6}],12:[function(require,module,exports){
+"use strict";
+var AST, Application, Lambda, envManagerProvider,
+  slice = [].slice;
+
+AST = require("AST");
+
+envManagerProvider = require("env_manager");
+
+Lambda = (function() {
+  function Lambda(run) {
+    this.run = run;
+    void 0;
+  }
+
+  return Lambda;
+
+})();
+
+Lambda.create = function(func) {
+  return new Lambda(func);
+};
+
+Application = (function() {
+  function Application(left1, right1) {
+    this.left = left1;
+    this.right = right1;
+    void 0;
+  }
+
+  return Application;
+
+})();
+
+Application.create = function(left, right) {
+  return new Application(left, right);
+};
+
+exports.create = function(reporter) {
+  var CHILD_ENV_KEY, envManager, self, visit, visitApp, visitLambda;
+  visit = {};
+  self = {
+    visit: visit
+  };
+  envManager = envManagerProvider.create();
+  CHILD_ENV_KEY = envManagerProvider.CHILD_ENV_KEY;
+  self.run = function(ast) {
+    return reporter.report(ast.accept(self));
+  };
+  visit[AST.LIST] = function(node) {
+    var expr, j, len, ref, res;
+    res = null;
+    ref = node.exprs;
+    for (j = 0, len = ref.length; j < len; j++) {
+      expr = ref[j];
+      res = expr.accept(self);
+    }
+    return res;
+  };
+  visitApp = function(exprs, env) {
+    var j, left, lefts, right;
+    if (exprs.length === 1) {
+      return exprs[0].accept(self);
+    }
+    lefts = 2 <= exprs.length ? slice.call(exprs, 0, j = exprs.length - 1) : (j = 0, []), right = exprs[j++];
+    left = visitApp(lefts, env);
+    if (left instanceof Lambda) {
+      return left.run(right.accept(self));
+    }
+    return Application.create(left, right);
+  };
+  visit[AST.APPLICATION] = function(node) {
+    var env;
+    env = envManager.getCurrent();
+    return visitApp(node.exprs, env);
+  };
+  visitLambda = function(args, body, env) {
+    var arg, i, others;
+    arg = args[0], others = 2 <= args.length ? slice.call(args, 1) : [];
+    i = 0;
+    return Lambda.create(function(x) {
+      return env[CHILD_ENV_KEY](function(local) {
+        local[arg] = x;
+        if (others.length === 0) {
+          return body.accept(self);
+        }
+        return visitLambda(others, body, local);
+      });
+    });
+  };
+  visit[AST.LAMBDA_ABSTRACTION] = function(node) {
+    var args, env;
+    args = node.args.map(function(id) {
+      return id.value;
+    });
+    env = envManager.getCurrent();
+    return visitLambda(args, node.body, env);
+  };
+  visit[AST.DEFINITION] = function(node) {
+    var body, env, name;
+    name = node.token.value;
+    body = node.body.accept(self);
+    env = envManager.getCurrent();
+    env[name] = body;
+    return Lambda.create(function(x) {
+      return x;
+    });
+  };
+  visit[AST.IDENTIFIER] = function(node) {
+    var env, id;
+    id = node.token.value;
+    env = envManager.getCurrent();
+    return env[id] || id;
+  };
+  return self;
+};
+
+
+
+},{"AST":2,"env_manager":5}],13:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier,
   slice = [].slice;
@@ -687,7 +840,7 @@ exports.create = function() {
 
 
 
-},{"AST":2,"constant":4}],12:[function(require,module,exports){
+},{"AST":2,"constant":4}],14:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -733,7 +886,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],13:[function(require,module,exports){
+},{"AST":2}],15:[function(require,module,exports){
 "use strict";
 var AST;
 
