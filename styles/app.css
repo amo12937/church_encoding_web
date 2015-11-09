@@ -10,3 +10,7 @@ a {
     color: #f00; }
   a:before {
     content: "> "; }
+
+#input {
+  width: 100%;
+  height: 200px; }

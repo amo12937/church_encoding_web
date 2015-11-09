@@ -26,7 +26,7 @@ jsVisitor = jsVisitorProvider.create();
 
 toStringVisitor = toStringVisitorProvider.create();
 
-interpreter = interpreterProvider.create(reporter);
+interpreter = interpreterProvider.create();
 
 createResultFragment = function(d, results) {
   var $fragment;
@@ -53,7 +53,7 @@ window.addEventListener("load", function() {
     console.time("parser");
     result = parser.parse(lexer);
     console.timeEnd("parser");
-    interpreter.run(result);
+    reporter.report(interpreter.run(result));
     $result.textContent = null;
     $fragment = createResultFragment(document, result.accept(jsVisitor));
     return $result.appendChild($fragment);
@@ -75,7 +75,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":8,"tokenizer":10,"views/append_examples":11,"visitor/interpreter":12,"visitor/js_visitor":13,"visitor/to_string_visitor":14,"visitor/tree_view_visitor":15}],2:[function(require,module,exports){
+},{"parser":9,"tokenizer":11,"views/append_examples":12,"visitor/interpreter":13,"visitor/js_visitor":14,"visitor/to_string_visitor":15,"visitor/tree_view_visitor":16}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -91,7 +91,7 @@ module.exports = prefixedKV("AST", {
 
 
 
-},{"prefixed_kv":9}],3:[function(require,module,exports){
+},{"prefixed_kv":10}],3:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -115,7 +115,7 @@ module.exports = prefixedKV("TOKEN", {
 
 
 
-},{"prefixed_kv":9}],4:[function(require,module,exports){
+},{"prefixed_kv":10}],4:[function(require,module,exports){
 "use strict";
 var CS_KEYWORDS, JS_KEYWORDS;
 
@@ -194,29 +194,23 @@ module.exports = {
 
 },{}],5:[function(require,module,exports){
 "use strict";
-var CEK;
+var CCK;
 
-exports.CHILD_ENV_KEY = CEK = ">";
+exports.CREATE_CHILD_KEY = CCK = "<";
 
 exports.create = function() {
-  var Env, current, global;
+  var Env, global;
   Env = function() {
     return void 0;
   };
   global = new Env;
-  current = global;
-  Env.prototype[CEK] = function(f) {
-    var old, result;
-    old = current;
+  Env.prototype[CCK] = function() {
     Env.prototype = this;
-    current = new Env;
-    result = f(current);
-    current = old;
-    return result;
+    return new Env;
   };
   return {
-    getCurrent: function() {
-      return current;
+    getGlobal: function() {
+      return global;
     }
   };
 };
@@ -230,6 +224,20 @@ module.exports = [[0, "0      := \\f x.x", ["$_0 = (f) -> (x) -> x"]], [1, "1   
 
 
 },{}],7:[function(require,module,exports){
+"use strict";
+exports.create = function(node, visitor) {
+  var resolved;
+  resolved = null;
+  return {
+    get: function() {
+      return resolved != null ? resolved : resolved = node.accept(visitor);
+    }
+  };
+};
+
+
+
+},{}],8:[function(require,module,exports){
 "use strict";
 var create;
 
@@ -262,7 +270,7 @@ module.exports = {
 
 
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 "use strict";
 var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline;
 
@@ -435,7 +443,7 @@ identifierNode = function(idToken) {
 
 
 
-},{"AST":2,"TOKEN":3}],9:[function(require,module,exports){
+},{"AST":2,"TOKEN":3}],10:[function(require,module,exports){
 "use strict";
 module.exports = (function() {
   var prefixedKV;
@@ -457,7 +465,7 @@ module.exports = (function() {
 
 
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
 
@@ -633,7 +641,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":7}],11:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":8}],12:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -658,126 +666,156 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":6}],12:[function(require,module,exports){
+},{"examples":6}],13:[function(require,module,exports){
 "use strict";
-var AST, Application, Lambda, envManagerProvider,
+var AST, Applicable, CREATE_CHILD_KEY, Definition, EnvManager, FutureEval, Lambda, createVisitor, envManager, toStringVisitor,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty,
   slice = [].slice;
 
 AST = require("AST");
 
-envManagerProvider = require("env_manager");
+FutureEval = require("future_eval");
 
-Lambda = (function() {
-  function Lambda(run) {
-    this.run = run;
+EnvManager = require("env_manager");
+
+CREATE_CHILD_KEY = EnvManager.CREATE_CHILD_KEY;
+
+envManager = EnvManager.create();
+
+toStringVisitor = require("visitor/to_string_visitor").create();
+
+Applicable = (function() {
+  function Applicable(apply) {
+    this.apply = apply;
     void 0;
   }
+
+  return Applicable;
+
+})();
+
+Lambda = (function(superClass) {
+  extend(Lambda, superClass);
+
+  function Lambda(env1, args1, body1) {
+    this.env = env1;
+    this.args = args1;
+    this.body = body1;
+    Lambda.__super__.constructor.call(this, function(x) {
+      var arg, e, others, ref, v;
+      ref = this.args, arg = ref[0], others = 2 <= ref.length ? slice.call(ref, 1) : [];
+      e = this.env[CREATE_CHILD_KEY]();
+      e[arg] = x;
+      v = createVisitor(e);
+      if (others.length === 0) {
+        return this.body.accept(v);
+      }
+      return Lambda.create(e, others, this.body);
+    });
+  }
+
+  Lambda.prototype.toString = function() {
+    var a, b;
+    a = this.args.join(" ");
+    b = this.body.accept(toStringVisitor);
+    return "(\\" + a + "." + b + ")";
+  };
 
   return Lambda;
 
-})();
+})(Applicable);
 
-Lambda.create = function(func) {
-  return new Lambda(func);
+Lambda.create = function(env, args, body) {
+  return new Lambda(env, args, body);
 };
 
-Application = (function() {
-  function Application(left1, right1) {
-    this.left = left1;
-    this.right = right1;
-    void 0;
+Definition = (function(superClass) {
+  extend(Definition, superClass);
+
+  function Definition(node1) {
+    this.node = node1;
+    Definition.__super__.constructor.call(this, function(x) {
+      return x;
+    });
   }
 
-  return Application;
+  Definition.prototype.toString = function() {
+    return this.node.accept(toStringVisitor);
+  };
 
-})();
+  return Definition;
 
-Application.create = function(left, right) {
-  return new Application(left, right);
+})(Applicable);
+
+Definition.create = function(node) {
+  return new Definition(node);
 };
 
-exports.create = function(reporter) {
-  var CHILD_ENV_KEY, envManager, self, visit, visitApp, visitLambda;
+createVisitor = function(env) {
+  var self, visit, visitApp;
   visit = {};
   self = {
     visit: visit
   };
-  envManager = envManagerProvider.create();
-  CHILD_ENV_KEY = envManagerProvider.CHILD_ENV_KEY;
-  self.run = function(ast) {
-    return reporter.report(ast.accept(self));
-  };
   visit[AST.LIST] = function(node) {
-    var expr, j, len, ref, res;
+    var expr, i, len, ref, res;
     res = null;
     ref = node.exprs;
-    for (j = 0, len = ref.length; j < len; j++) {
-      expr = ref[j];
+    for (i = 0, len = ref.length; i < len; i++) {
+      expr = ref[i];
       res = expr.accept(self);
     }
     return res;
   };
-  visitApp = function(exprs, env) {
-    var j, left, lefts, right;
+  visitApp = function(exprs) {
+    var i, left, lefts, right;
     if (exprs.length === 1) {
       return exprs[0].accept(self);
     }
-    lefts = 2 <= exprs.length ? slice.call(exprs, 0, j = exprs.length - 1) : (j = 0, []), right = exprs[j++];
-    left = visitApp(lefts, env);
-    if (left instanceof Lambda) {
-      return left.run(right.accept(self));
+    lefts = 2 <= exprs.length ? slice.call(exprs, 0, i = exprs.length - 1) : (i = 0, []), right = exprs[i++];
+    left = visitApp(lefts);
+    if (left instanceof Applicable) {
+      return left.apply(FutureEval.create(right, self));
     }
-    return Application.create(left, right);
+    return left + " " + (right.accept(toStringVisitor));
   };
   visit[AST.APPLICATION] = function(node) {
-    var env;
-    env = envManager.getCurrent();
-    return visitApp(node.exprs, env);
-  };
-  visitLambda = function(args, body, env) {
-    var arg, i, others;
-    arg = args[0], others = 2 <= args.length ? slice.call(args, 1) : [];
-    i = 0;
-    return Lambda.create(function(x) {
-      return env[CHILD_ENV_KEY](function(local) {
-        local[arg] = x;
-        if (others.length === 0) {
-          return body.accept(self);
-        }
-        return visitLambda(others, body, local);
-      });
-    });
+    return visitApp(node.exprs);
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    var args, env;
+    var args;
     args = node.args.map(function(id) {
       return id.value;
     });
-    env = envManager.getCurrent();
-    return visitLambda(args, node.body, env);
+    return Lambda.create(env, args, node.body);
   };
   visit[AST.DEFINITION] = function(node) {
-    var body, env, name;
+    var name;
     name = node.token.value;
-    body = node.body.accept(self);
-    env = envManager.getCurrent();
-    env[name] = body;
-    return Lambda.create(function(x) {
-      return x;
-    });
+    env[name] = FutureEval.create(node.body, self);
+    return Definition.create(node);
   };
   visit[AST.IDENTIFIER] = function(node) {
-    var env, id;
-    id = node.token.value;
-    env = envManager.getCurrent();
-    return env[id] || id;
+    var ref;
+    return ((ref = env[node.token.value]) != null ? ref.get() : void 0) || node.accept(toStringVisitor);
+  };
+  self.run = function(ast) {
+    return "" + (ast.accept(self));
   };
   return self;
 };
 
+exports.create = function(env) {
+  if (env == null) {
+    env = envManager.getGlobal();
+  }
+  return createVisitor(env);
+};
 
 
-},{"AST":2,"env_manager":5}],13:[function(require,module,exports){
+
+},{"AST":2,"env_manager":5,"future_eval":7,"visitor/to_string_visitor":15}],14:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier,
   slice = [].slice;
@@ -840,7 +878,7 @@ exports.create = function() {
 
 
 
-},{"AST":2,"constant":4}],14:[function(require,module,exports){
+},{"AST":2,"constant":4}],15:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -886,7 +924,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],15:[function(require,module,exports){
+},{"AST":2}],16:[function(require,module,exports){
 "use strict";
 var AST;
 
