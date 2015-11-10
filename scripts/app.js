@@ -75,7 +75,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":9,"tokenizer":13,"views/append_examples":14,"visitor/interpreter":15,"visitor/js_visitor":16,"visitor/to_string_visitor":17,"visitor/tree_view_visitor":18}],2:[function(require,module,exports){
+},{"parser":9,"tokenizer":17,"views/append_examples":18,"visitor/interpreter":19,"visitor/js_visitor":20,"visitor/to_string_visitor":21,"visitor/tree_view_visitor":22}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -86,7 +86,10 @@ module.exports = prefixedKV("AST", {
   "APPLICATION": "APPLICATION",
   "LAMBDA_ABSTRACTION": "LAMBDA_ABSTRACTION",
   "DEFINITION": "DEFINITION",
-  "IDENTIFIER": "IDENTIFIER"
+  "IDENTIFIER": "IDENTIFIER",
+  NUMBER: {
+    "NATURAL": "NATURAL"
+  }
 });
 
 
@@ -104,6 +107,9 @@ module.exports = prefixedKV("TOKEN", {
   "BRACKETS_CLOSE": "BRACKETS_CLOSE",
   "DEF_OP": "DEF_OP",
   "IDENTIFIER": "IDENTIFIER",
+  NUMBER: {
+    "NATURAL": "NATURAL"
+  },
   "LINE_BREAK": "LINE_BREAK",
   "INDENT": "INDENT",
   "EOF": "EOF",
@@ -226,11 +232,17 @@ module.exports = [[0, "0      := \\f x.x", "$_0 = (f) -> (x) -> x"], [1, "1     
 },{}],7:[function(require,module,exports){
 "use strict";
 exports.create = function(node, visitor) {
+  return this.createWithGetter(function() {
+    return node.accept(visitor);
+  });
+};
+
+exports.createWithGetter = function(getter) {
   var resolved;
   resolved = null;
   return {
     get: function() {
-      return resolved != null ? resolved : resolved = node.accept(visitor);
+      return resolved != null ? resolved : resolved = getter();
     }
   };
 };
@@ -272,7 +284,7 @@ module.exports = {
 
 },{}],9:[function(require,module,exports){
 "use strict";
-var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline,
+var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, naturalNumberNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline,
   slice = [].slice;
 
 TOKEN = require("TOKEN");
@@ -399,10 +411,14 @@ parseIdentifier = function(lexer) {
   var rewind, token;
   rewind = lexer.memento();
   token = lexer.next();
-  if (token.tag === TOKEN.IDENTIFIER) {
-    return identifierNode(token.value);
+  switch (token.tag) {
+    case TOKEN.IDENTIFIER:
+      return identifierNode(token.value);
+    case TOKEN.NUMBER.NATURAL:
+      return naturalNumberNode(token.value);
+    default:
+      return rewind();
   }
-  return rewind();
 };
 
 acceptor = function(visitor) {
@@ -410,7 +426,7 @@ acceptor = function(visitor) {
   return typeof (base = visitor.visit)[name1 = this.tag] === "function" ? base[name1](this) : void 0;
 };
 
-listNode = function(exprs) {
+exports.listNode = listNode = function(exprs) {
   return {
     tag: AST.LIST,
     exprs: exprs,
@@ -418,7 +434,7 @@ listNode = function(exprs) {
   };
 };
 
-applicationNode = function(left, right) {
+exports.applicationNode = applicationNode = function(left, right) {
   return {
     tag: AST.APPLICATION,
     left: left,
@@ -427,7 +443,7 @@ applicationNode = function(left, right) {
   };
 };
 
-lambdaAbstractionNode = function(arg, body) {
+exports.lambdaAbstractionNode = lambdaAbstractionNode = function(arg, body) {
   return {
     tag: AST.LAMBDA_ABSTRACTION,
     arg: arg,
@@ -436,7 +452,7 @@ lambdaAbstractionNode = function(arg, body) {
   };
 };
 
-definitionNode = function(name, body) {
+exports.definitionNode = definitionNode = function(name, body) {
   return {
     tag: AST.DEFINITION,
     name: name,
@@ -445,10 +461,18 @@ definitionNode = function(name, body) {
   };
 };
 
-identifierNode = function(name) {
+exports.identifierNode = identifierNode = function(name) {
   return {
     tag: AST.IDENTIFIER,
     name: name,
+    accept: acceptor
+  };
+};
+
+exports.naturalNumberNode = naturalNumberNode = function(value) {
+  return {
+    tag: AST.NUMBER.NATURAL,
+    value: +value,
     accept: acceptor
   };
 };
@@ -479,74 +503,199 @@ module.exports = (function() {
 
 },{}],11:[function(require,module,exports){
 "use strict";
-var LambdaAbstractionRunnable, Runnable,
+var BradeRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-Runnable = require("runnable/runnable");
+Runner = require("runner/runner");
 
-LambdaAbstractionRunnable = (function(superClass) {
-  extend(LambdaAbstractionRunnable, superClass);
+module.exports = BradeRunner = (function(superClass) {
+  extend(BradeRunner, superClass);
 
-  function LambdaAbstractionRunnable(node, interpreter1) {
-    this.interpreter = interpreter1;
-    LambdaAbstractionRunnable.__super__.constructor.call(this, node);
-  }
-
-  LambdaAbstractionRunnable.prototype.run = function(thunk) {
-    var i;
-    i = this.interpreter.createChild();
-    i.env[this.node.arg] = thunk;
-    return this.node.body.accept(i);
-  };
-
-  return LambdaAbstractionRunnable;
-
-})(Runnable);
-
-LambdaAbstractionRunnable.create = function(node, interpreter) {
-  return new LambdaAbstractionRunnable(node, interpreter);
-};
-
-module.exports = LambdaAbstractionRunnable;
-
-
-
-},{"runnable/runnable":12}],12:[function(require,module,exports){
-"use strict";
-var Runnable, toStringVisitor;
-
-toStringVisitor = require("visitor/to_string_visitor").create();
-
-Runnable = (function() {
-  function Runnable(node1) {
-    this.node = node1;
+  function BradeRunner(interpreter, toString, run) {
+    this.toString = toString;
+    this.run = run;
     void 0;
   }
 
-  Runnable.prototype.run = function(thunk) {
+  return BradeRunner;
+
+})(Runner);
+
+
+
+},{"runner/runner":16}],12:[function(require,module,exports){
+"use strict";
+var DefinitionRunner, Runner,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Runner = require("runner/runner");
+
+module.exports = DefinitionRunner = (function(superClass) {
+  extend(DefinitionRunner, superClass);
+
+  function DefinitionRunner(interpreter, name, body) {
+    this.name = name;
+    this.body = body;
+    DefinitionRunner.__super__.constructor.call(this, interpreter);
+  }
+
+  DefinitionRunner.prototype.toString = function() {
+    return this.name + ": OK";
+  };
+
+  return DefinitionRunner;
+
+})(Runner);
+
+
+
+},{"runner/runner":16}],13:[function(require,module,exports){
+"use strict";
+var IdentifierRunner, Runner,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Runner = require("runner/runner");
+
+module.exports = IdentifierRunner = (function(superClass) {
+  extend(IdentifierRunner, superClass);
+
+  function IdentifierRunner(interpreter, name) {
+    this.name = name;
+    IdentifierRunner.__super__.constructor.call(this, interpreter);
+  }
+
+  IdentifierRunner.prototype.toString = function() {
+    return this.name;
+  };
+
+  return IdentifierRunner;
+
+})(Runner);
+
+
+
+},{"runner/runner":16}],14:[function(require,module,exports){
+"use strict";
+var LambdaAbstractionRunner, Runner, toStringVisitor,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Runner = require("runner/runner");
+
+toStringVisitor = require("visitor/to_string_visitor").create();
+
+module.exports = LambdaAbstractionRunner = (function(superClass) {
+  extend(LambdaAbstractionRunner, superClass);
+
+  function LambdaAbstractionRunner(interpreter, arg, body) {
+    this.arg = arg;
+    this.body = body;
+    LambdaAbstractionRunner.__super__.constructor.call(this, interpreter);
+  }
+
+  LambdaAbstractionRunner.prototype.run = function(thunk) {
+    var i;
+    i = this.interpreter.createChild();
+    i.env[this.arg] = thunk;
+    return this.body.accept(i);
+  };
+
+  LambdaAbstractionRunner.prototype.toString = function() {
+    return "\\" + this.arg + "." + (this.body.accept(toStringVisitor));
+  };
+
+  return LambdaAbstractionRunner;
+
+})(Runner);
+
+
+
+},{"runner/runner":16,"visitor/to_string_visitor":21}],15:[function(require,module,exports){
+"use strict";
+var BradeRunner, FutureEval, NumberRunner, Runner,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Runner = require("runner/runner");
+
+BradeRunner = require("runner/brade");
+
+FutureEval = require("future_eval");
+
+module.exports = NumberRunner = (function(superClass) {
+  extend(NumberRunner, superClass);
+
+  function NumberRunner(interpreter, value) {
+    this.value = value;
+    NumberRunner.__super__.constructor.call(this, interpreter);
+  }
+
+  NumberRunner.prototype.run = function(thunk) {
+    var i, m, r, toS, val;
+    if (this.value === 0) {
+      return Runner.create(this.interpreter);
+    }
+    r = thunk.get();
+    if (this.value === 1) {
+      return r;
+    }
+    if (r instanceof NumberRunner) {
+      val = Math.pow(r.value, this.value);
+      return NumberRunner.create(this.interpreter, val);
+    }
+    m = this.value - 1;
+    i = this.interpreter;
+    toS = function() {
+      return "f (" + m + " f x)";
+    };
+    return BradeRunner.create(i, toS, function(thunk2) {
+      return r.run(FutureEval.createWithGetter(function() {
+        return NumberRunner.create(i, m).run(thunk).run(thunk2);
+      }));
+    });
+  };
+
+  NumberRunner.prototype.toString = function() {
+    return "" + this.value;
+  };
+
+  return NumberRunner;
+
+})(Runner);
+
+
+
+},{"future_eval":7,"runner/brade":11,"runner/runner":16}],16:[function(require,module,exports){
+"use strict";
+var Runner,
+  slice = [].slice;
+
+module.exports = Runner = (function() {
+  function Runner(interpreter) {
+    this.interpreter = interpreter;
+    void 0;
+  }
+
+  Runner.prototype.run = function(thunk) {
     return thunk.get();
   };
 
-  Runnable.prototype.toString = function() {
-    return this.node.accept(toStringVisitor);
-  };
-
-  return Runnable;
+  return Runner;
 
 })();
 
-Runnable.create = function(node) {
-  return new this(node);
+Runner.create = function() {
+  return new (Function.prototype.bind.apply(this, [this].concat(slice.call(arguments))));
 };
 
-module.exports = Runnable;
 
 
-
-},{"visitor/to_string_visitor":17}],13:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 "use strict";
-var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
+var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, updateLocation, whitespaceToken;
 
 TOKEN = require("TOKEN");
 
@@ -595,7 +744,7 @@ exports.tokenize = function(code) {
   };
   i = 0;
   while (context.chunk = code.slice(i)) {
-    consumed = commentToken(context) || whitespaceToken(context) || lineToken(context) || literalToken(context) || identifierToken(context) || errorToken(context);
+    consumed = commentToken(context) || whitespaceToken(context) || lineToken(context) || literalToken(context) || identifierToken(context) || naturalNumberToken(context) || errorToken(context);
     i += consumed;
     ref = updateLocation(line, column, context.chunk, consumed), line = ref[0], column = ref[1];
   }
@@ -682,7 +831,7 @@ literalToken = function(c) {
   return 0;
 };
 
-IDENTIFIER = /^[_a-zA-Z0-9]+/;
+IDENTIFIER = /^[_a-zA-Z]\w*/;
 
 identifierToken = function(c) {
   var match;
@@ -690,6 +839,17 @@ identifierToken = function(c) {
     return 0;
   }
   c.addToken(TOKEN.IDENTIFIER, match[0]);
+  return match[0].length;
+};
+
+NATURAL_NUMBER = /^(?:0|[1-9]\d*)/;
+
+naturalNumberToken = function(c) {
+  var match;
+  if (!(match = c.chunk.match(NATURAL_NUMBER))) {
+    return 0;
+  }
+  c.addToken(TOKEN.NUMBER.NATURAL, match[0]);
   return match[0].length;
 };
 
@@ -720,7 +880,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":8}],14:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":8}],18:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -745,9 +905,9 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":6}],15:[function(require,module,exports){
+},{"examples":6}],19:[function(require,module,exports){
 "use strict";
-var AST, CREATE_CHILD_KEY, EnvManager, FutureEval, LambdaAbstractionRunnable, Runnable, createInterpreter, envManager;
+var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, Runner, createInterpreter, envManager;
 
 AST = require("AST");
 
@@ -759,9 +919,15 @@ CREATE_CHILD_KEY = EnvManager.CREATE_CHILD_KEY;
 
 envManager = EnvManager.create();
 
-Runnable = require("runnable/runnable");
+Runner = require("runner/runner");
 
-LambdaAbstractionRunnable = require("runnable/lambda_abstraction");
+LambdaAbstractionRunner = require("runner/lambda_abstraction");
+
+DefinitionRunner = require("runner/definition");
+
+IdentifierRunner = require("runner/identifier");
+
+NumberRunner = require("runner/number");
 
 exports.create = createInterpreter = function(env) {
   var self, visit;
@@ -777,35 +943,33 @@ exports.create = createInterpreter = function(env) {
     }
   };
   visit[AST.LIST] = function(node) {
-    var expr, i, len, ref, res;
-    res = null;
-    ref = node.exprs;
-    for (i = 0, len = ref.length; i < len; i++) {
-      expr = ref[i];
-      res = expr.accept(self);
-    }
-    return "" + res;
+    return node.exprs.map(function(expr) {
+      return "" + (expr.accept(self));
+    }).join("\n");
   };
   visit[AST.APPLICATION] = function(node) {
     return node.left.accept(self).run(FutureEval.create(node.right, self));
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    return LambdaAbstractionRunnable.create(node, self);
+    return LambdaAbstractionRunner.create(self, node.arg, node.body);
   };
   visit[AST.DEFINITION] = function(node) {
     env[node.name] = FutureEval.create(node.body, self);
-    return Runnable.create(node);
+    return DefinitionRunner.create(self, node.name, node.body);
   };
   visit[AST.IDENTIFIER] = function(node) {
     var ref;
-    return ((ref = env[node.name]) != null ? ref.get() : void 0) || Runnable.create(node);
+    return ((ref = env[node.name]) != null ? ref.get() : void 0) || IdentifierRunner.create(self, node.name);
+  };
+  visit[AST.NUMBER.NATURAL] = function(node) {
+    return NumberRunner.create(self, node.value);
   };
   return self;
 };
 
 
 
-},{"AST":2,"env_manager":5,"future_eval":7,"runnable/lambda_abstraction":11,"runnable/runnable":12}],16:[function(require,module,exports){
+},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":14,"runner/number":15,"runner/runner":16}],20:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier;
 
@@ -853,7 +1017,7 @@ exports.create = function() {
 
 
 
-},{"AST":2,"constant":4}],17:[function(require,module,exports){
+},{"AST":2,"constant":4}],21:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -887,7 +1051,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],18:[function(require,module,exports){
+},{"AST":2}],22:[function(require,module,exports){
 "use strict";
 var AST;
 
