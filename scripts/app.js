@@ -947,7 +947,7 @@ literalToken = function(c) {
   return 0;
 };
 
-IDENTIFIER = /^[_a-zA-Z]\w*/;
+IDENTIFIER = /^(?:[_a-zA-Z]\w*|[!$%&*+\/<=>?@^|\-~]+)/;
 
 identifierToken = function(c) {
   var match;
