@@ -75,7 +75,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":9,"tokenizer":19,"views/append_examples":20,"visitor/interpreter":21,"visitor/js_visitor":22,"visitor/to_string_visitor":23,"visitor/tree_view_visitor":24}],2:[function(require,module,exports){
+},{"parser":9,"tokenizer":20,"views/append_examples":21,"visitor/interpreter":22,"visitor/js_visitor":23,"visitor/to_string_visitor":24,"visitor/tree_view_visitor":25}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -225,7 +225,7 @@ exports.create = function() {
 
 },{}],6:[function(require,module,exports){
 "use strict";
-module.exports = [[0, "0      := \\f x.x", "$_0 = (f) -> (x) -> x"], [1, "1      := \\f x.f x", "$_1 = (f) -> (x) -> (f)(x)"], [2, "2      := \\f x.f (f x)", "$_2 = (f) -> (x) -> (f)((f)(x))"], [3, "succ   := \\n f x.f (n f x)", "succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"], [5, "add    := \\m n f x.m f (n f x)", "add = (m) -> (n) -> (f) -> (x) -> ((m)(f))(((n)(f))(x))"], [6, "mul    := \\m n f.m (n f)", "mul = (m) -> (n) -> (f) -> (m)((n)(f))"], [7, "exp    := \\m n.n m", "exp = (m) -> (n) -> (n)(m)"], [8, "true   := \\x y.x", "$true = (x) -> (y) -> x"], [9, "false  := \\x y.y", "$false = (x) -> (y) -> y"], [10, "and    := \\p q x y.p (q x y) y", "$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"], [11, "or     := \\p q x y.p x (q x y)", "$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"], [12, "not    := \\p x y.p y x", "$not = (p) -> (x) -> (y) -> ((p)(y))(x)"], [13, "if     := \\p x y.p x y", "$if = (p) -> (x) -> (y) -> ((p)(x))(y)"], [14, "isZero := \\n.n (\\x. false) true", "isZero = (n) -> ((n)((x) -> $false))($true)"], [15, "pair   := \\a b p.p a b", "pair = (a) -> (b) -> (p) -> ((p)(a))(b)"], [16, "first  := \\p.p true", "first = (p) -> (p)($true)"], [17, "second := \\p.p false", "second = (p) -> (p)($false)"], [18, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"], [19, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", "Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"], [20, "fact   := \\f n.if (isZero n) 1 (\\x.mul n (f (pred n)) x)", "fact = (f) -> (n) -> ((($if)((isZero)(n)))($_1))((x) -> (((mul)(n))((f)((pred)(n))))(x))"]];
+module.exports = [[0, "_0     := \\f x.x", "_0 = (f) -> (x) -> x"], [1, "_1     := \\f x.f x", "_1 = (f) -> (x) -> (f)(x)"], [2, "_2     := \\f x.f (f x)", "_2 = (f) -> (x) -> (f)((f)(x))"], [3, "succ   := \\n f x.f (n f x)", "succ = (n) -> (f) -> (x) -> (f)(((n)(f))(x))"], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "pred = (n) -> (f) -> (x) -> (((n)((g) -> (h) -> (h)((g)(f))))((u) -> x))((v) -> v)"], [5, "add    := \\m n f x.m f (n f x)", "add = (m) -> (n) -> (f) -> (x) -> ((m)(f))(((n)(f))(x))"], [6, "mul    := \\m n f.m (n f)", "mul = (m) -> (n) -> (f) -> (m)((n)(f))"], [7, "exp    := \\m n.n m", "exp = (m) -> (n) -> (n)(m)"], [8, "true   := \\x y.x", "$true = (x) -> (y) -> x"], [9, "false  := \\x y.y", "$false = (x) -> (y) -> y"], [10, "and    := \\p q x y.p (q x y) y", "$and = (p) -> (q) -> (x) -> (y) -> ((p)(((q)(x))(y)))(y)"], [11, "or     := \\p q x y.p x (q x y)", "$or = (p) -> (q) -> (x) -> (y) -> ((p)(x))(((q)(x))(y))"], [12, "not    := \\p x y.p y x", "$not = (p) -> (x) -> (y) -> ((p)(y))(x)"], [13, "if     := \\p x y.p x y", "$if = (p) -> (x) -> (y) -> ((p)(x))(y)"], [14, "isZero := \\n.n (\\x. false) true", "isZero = (n) -> ((n)((x) -> $false))($true)"], [15, "pair   := \\a b p.p a b", "pair = (a) -> (b) -> (p) -> ((p)(a))(b)"], [16, "first  := \\p.p true", "first = (p) -> (p)($true)"], [17, "second := \\p.p false", "second = (p) -> (p)($false)"], [18, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "Y = (f) -> ((x) -> (f)((x)(x)))((x) -> (f)((x)(x)))"], [19, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", "Z = (f) -> ((x) -> (f)((y) -> ((x)(x))(y)))((x) -> (f)((y) -> ((x)(x))(y)))"], [20, "fact   := \\f n.if (isZero n) 1 (\\x.mul n (f (pred n)) x)", "fact = (f) -> (n) -> ((($if)((isZero)(n)))($_1))((x) -> (((mul)(n))((f)((pred)(n))))(x))"]];
 
 
 
@@ -524,7 +524,7 @@ module.exports = BradeRunner = (function(superClass) {
 
 
 
-},{"runner/runner":18}],12:[function(require,module,exports){
+},{"runner/runner":19}],12:[function(require,module,exports){
 "use strict";
 var DefinitionRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -551,7 +551,7 @@ module.exports = DefinitionRunner = (function(superClass) {
 
 
 
-},{"runner/runner":18}],13:[function(require,module,exports){
+},{"runner/runner":19}],13:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, Runner, reserved,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -587,9 +587,55 @@ IdentifierRunner.register = function(name, runner) {
 
 
 
-},{"runner/runner":18}],14:[function(require,module,exports){
+},{"runner/runner":19}],14:[function(require,module,exports){
 "use strict";
-var BradeRunner, FutureEval, IdentifierRunner, NumberRunner, SuccIdentifierRunner, name,
+var IdentifierRunner, LambdaAbstractionRunner, NumberRunner, PredIdentifierRunner, ast, code, parser, tokenizer,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+IdentifierRunner = require("runner/identifier");
+
+NumberRunner = require("runner/number");
+
+LambdaAbstractionRunner = require("runner/lambda_abstraction");
+
+tokenizer = require("tokenizer");
+
+parser = require("parser");
+
+code = "\\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)";
+
+ast = parser.parse(tokenizer.tokenize(code)).exprs[0];
+
+module.exports = PredIdentifierRunner = (function(superClass) {
+  extend(PredIdentifierRunner, superClass);
+
+  function PredIdentifierRunner() {
+    return PredIdentifierRunner.__super__.constructor.apply(this, arguments);
+  }
+
+  PredIdentifierRunner.prototype.run = function(nThunk) {
+    var i, lmda, n;
+    i = this.interpreter;
+    n = nThunk.get();
+    if (n instanceof NumberRunner) {
+      return NumberRunner.create(i, Math.max(0, n.value - 1));
+    }
+    lmda = LambdaAbstractionRunner.create(i, ast.arg, ast.body);
+    return lmda.run(nThunk);
+  };
+
+  return PredIdentifierRunner;
+
+})(IdentifierRunner);
+
+IdentifierRunner.register("pred", PredIdentifierRunner);
+
+
+
+},{"parser":9,"runner/identifier":13,"runner/lambda_abstraction":16,"runner/number":17,"tokenizer":20}],15:[function(require,module,exports){
+"use strict";
+var BradeRunner, FutureEval, IdentifierRunner, NumberRunner, SuccIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
@@ -600,8 +646,6 @@ NumberRunner = require("runner/number");
 BradeRunner = require("runner/brade");
 
 FutureEval = require("future_eval");
-
-name = "succ";
 
 module.exports = SuccIdentifierRunner = (function(superClass) {
   extend(SuccIdentifierRunner, superClass);
@@ -637,11 +681,11 @@ module.exports = SuccIdentifierRunner = (function(superClass) {
 
 })(IdentifierRunner);
 
-IdentifierRunner.register(name, SuccIdentifierRunner);
+IdentifierRunner.register("succ", SuccIdentifierRunner);
 
 
 
-},{"future_eval":7,"runner/brade":11,"runner/identifier":13,"runner/number":16}],15:[function(require,module,exports){
+},{"future_eval":7,"runner/brade":11,"runner/identifier":13,"runner/number":17}],16:[function(require,module,exports){
 "use strict";
 var LambdaAbstractionRunner, Runner, toStringVisitor,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -677,7 +721,7 @@ module.exports = LambdaAbstractionRunner = (function(superClass) {
 
 
 
-},{"runner/runner":18,"visitor/to_string_visitor":23}],16:[function(require,module,exports){
+},{"runner/runner":19,"visitor/to_string_visitor":24}],17:[function(require,module,exports){
 "use strict";
 var BradeRunner, FutureEval, NumberRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -732,13 +776,15 @@ module.exports = NumberRunner = (function(superClass) {
 
 
 
-},{"future_eval":7,"runner/brade":11,"runner/runner":18}],17:[function(require,module,exports){
+},{"future_eval":7,"runner/brade":11,"runner/runner":19}],18:[function(require,module,exports){
 "use strict";
 require("runner/identifier/succ");
 
+require("runner/identifier/pred");
 
 
-},{"runner/identifier/succ":14}],18:[function(require,module,exports){
+
+},{"runner/identifier/pred":14,"runner/identifier/succ":15}],19:[function(require,module,exports){
 "use strict";
 var Runner,
   slice = [].slice;
@@ -763,7 +809,7 @@ Runner.create = function() {
 
 
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, updateLocation, whitespaceToken;
 
@@ -912,7 +958,7 @@ identifierToken = function(c) {
   return match[0].length;
 };
 
-NATURAL_NUMBER = /^(?:0|[1-9]\d*)/;
+NATURAL_NUMBER = /^(?:0|[1-9]\d*)(?![_a-zA-Z])/;
 
 naturalNumberToken = function(c) {
   var match;
@@ -950,7 +996,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":8}],20:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":8}],21:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -975,7 +1021,7 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":6}],21:[function(require,module,exports){
+},{"examples":6}],22:[function(require,module,exports){
 "use strict";
 var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, Runner, createInterpreter, envManager;
 
@@ -1041,7 +1087,7 @@ exports.create = createInterpreter = function(env) {
 
 
 
-},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":15,"runner/number":16,"runner/reserved":17,"runner/runner":18}],22:[function(require,module,exports){
+},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":16,"runner/number":17,"runner/reserved":18,"runner/runner":19}],23:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier;
 
@@ -1089,7 +1135,7 @@ exports.create = function() {
 
 
 
-},{"AST":2,"constant":4}],23:[function(require,module,exports){
+},{"AST":2,"constant":4}],24:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -1123,7 +1169,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],24:[function(require,module,exports){
+},{"AST":2}],25:[function(require,module,exports){
 "use strict";
 var AST;
 
