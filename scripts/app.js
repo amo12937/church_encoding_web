@@ -53,8 +53,7 @@ window.addEventListener("load", function() {
     console.time("parser");
     result = parser.parse(lexer);
     console.timeEnd("parser");
-    result.accept(visitor);
-    reporter.report(result.accept(toStringVisitor));
+    reporter.report(result.accept(interpreter));
     $result.textContent = null;
     $fragment = createResultFragment(document, result.accept(jsVisitor).split("\n"));
     return $result.appendChild($fragment);
@@ -76,7 +75,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":9,"tokenizer":11,"views/append_examples":12,"visitor/interpreter":13,"visitor/js_visitor":14,"visitor/to_string_visitor":15,"visitor/tree_view_visitor":16}],2:[function(require,module,exports){
+},{"parser":9,"tokenizer":13,"views/append_examples":14,"visitor/interpreter":15,"visitor/js_visitor":16,"visitor/to_string_visitor":17,"visitor/tree_view_visitor":18}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -480,6 +479,73 @@ module.exports = (function() {
 
 },{}],11:[function(require,module,exports){
 "use strict";
+var LambdaAbstractionRunnable, Runnable,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Runnable = require("runnable/runnable");
+
+LambdaAbstractionRunnable = (function(superClass) {
+  extend(LambdaAbstractionRunnable, superClass);
+
+  function LambdaAbstractionRunnable(node, interpreter1) {
+    this.interpreter = interpreter1;
+    LambdaAbstractionRunnable.__super__.constructor.call(this, node);
+  }
+
+  LambdaAbstractionRunnable.prototype.run = function(thunk) {
+    var i;
+    i = this.interpreter.createChild();
+    i.env[this.node.arg] = thunk;
+    return this.node.body.accept(i);
+  };
+
+  return LambdaAbstractionRunnable;
+
+})(Runnable);
+
+LambdaAbstractionRunnable.create = function(node, interpreter) {
+  return new LambdaAbstractionRunnable(node, interpreter);
+};
+
+module.exports = LambdaAbstractionRunnable;
+
+
+
+},{"runnable/runnable":12}],12:[function(require,module,exports){
+"use strict";
+var Runnable, toStringVisitor;
+
+toStringVisitor = require("visitor/to_string_visitor").create();
+
+Runnable = (function() {
+  function Runnable(node1) {
+    this.node = node1;
+    void 0;
+  }
+
+  Runnable.prototype.run = function(thunk) {
+    return thunk.get();
+  };
+
+  Runnable.prototype.toString = function() {
+    return this.node.accept(toStringVisitor);
+  };
+
+  return Runnable;
+
+})();
+
+Runnable.create = function(node) {
+  return new this(node);
+};
+
+module.exports = Runnable;
+
+
+
+},{"visitor/to_string_visitor":17}],13:[function(require,module,exports){
+"use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, updateLocation, whitespaceToken;
 
 TOKEN = require("TOKEN");
@@ -654,7 +720,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":8}],12:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":8}],14:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -679,12 +745,9 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":6}],13:[function(require,module,exports){
+},{"examples":6}],15:[function(require,module,exports){
 "use strict";
-var AST, Applicable, CREATE_CHILD_KEY, Definition, EnvManager, FutureEval, Lambda, createVisitor, envManager, toStringVisitor,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty,
-  slice = [].slice;
+var AST, CREATE_CHILD_KEY, EnvManager, FutureEval, LambdaAbstractionRunnable, Runnable, createInterpreter, envManager;
 
 AST = require("AST");
 
@@ -696,80 +759,22 @@ CREATE_CHILD_KEY = EnvManager.CREATE_CHILD_KEY;
 
 envManager = EnvManager.create();
 
-toStringVisitor = require("visitor/to_string_visitor").create();
+Runnable = require("runnable/runnable");
 
-Applicable = (function() {
-  function Applicable(apply) {
-    this.apply = apply;
-    void 0;
+LambdaAbstractionRunnable = require("runnable/lambda_abstraction");
+
+exports.create = createInterpreter = function(env) {
+  var self, visit;
+  if (env == null) {
+    env = envManager.getGlobal();
   }
-
-  return Applicable;
-
-})();
-
-Lambda = (function(superClass) {
-  extend(Lambda, superClass);
-
-  function Lambda(env1, args1, body1) {
-    this.env = env1;
-    this.args = args1;
-    this.body = body1;
-    Lambda.__super__.constructor.call(this, function(x) {
-      var arg, e, others, ref, v;
-      ref = this.args, arg = ref[0], others = 2 <= ref.length ? slice.call(ref, 1) : [];
-      e = this.env[CREATE_CHILD_KEY]();
-      e[arg] = x;
-      v = createVisitor(e);
-      if (others.length === 0) {
-        return this.body.accept(v);
-      }
-      return Lambda.create(e, others, this.body);
-    });
-  }
-
-  Lambda.prototype.toString = function() {
-    var a, b;
-    a = this.args.join(" ");
-    b = this.body.accept(toStringVisitor);
-    return "(\\" + a + "." + b + ")";
-  };
-
-  return Lambda;
-
-})(Applicable);
-
-Lambda.create = function(env, args, body) {
-  return new Lambda(env, args, body);
-};
-
-Definition = (function(superClass) {
-  extend(Definition, superClass);
-
-  function Definition(node1) {
-    this.node = node1;
-    Definition.__super__.constructor.call(this, function(x) {
-      return x;
-    });
-  }
-
-  Definition.prototype.toString = function() {
-    return this.node.accept(toStringVisitor);
-  };
-
-  return Definition;
-
-})(Applicable);
-
-Definition.create = function(node) {
-  return new Definition(node);
-};
-
-createVisitor = function(env) {
-  var self, visit, visitApp;
   visit = {};
   self = {
-    visit: visit
+    env: env,
+    visit: visit,
+    createChild: function() {
+      return createInterpreter(env[CREATE_CHILD_KEY]());
+    }
   };
   visit[AST.LIST] = function(node) {
     var expr, i, len, ref, res;
@@ -779,56 +784,28 @@ createVisitor = function(env) {
       expr = ref[i];
       res = expr.accept(self);
     }
-    return res;
-  };
-  visitApp = function(exprs) {
-    var i, left, lefts, right;
-    if (exprs.length === 1) {
-      return exprs[0].accept(self);
-    }
-    lefts = 2 <= exprs.length ? slice.call(exprs, 0, i = exprs.length - 1) : (i = 0, []), right = exprs[i++];
-    left = visitApp(lefts);
-    if (left instanceof Applicable) {
-      return left.apply(FutureEval.create(right, self));
-    }
-    return left + " " + (right.accept(toStringVisitor));
+    return "" + res;
   };
   visit[AST.APPLICATION] = function(node) {
-    return visitApp(node.exprs);
+    return node.left.accept(self).run(FutureEval.create(node.right, self));
   };
   visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    var args;
-    args = node.args.map(function(id) {
-      return id.value;
-    });
-    return Lambda.create(env, args, node.body);
+    return LambdaAbstractionRunnable.create(node, self);
   };
   visit[AST.DEFINITION] = function(node) {
-    var name;
-    name = node.token.value;
-    env[name] = FutureEval.create(node.body, self);
-    return Definition.create(node);
+    env[node.name] = FutureEval.create(node.body, self);
+    return Runnable.create(node);
   };
   visit[AST.IDENTIFIER] = function(node) {
     var ref;
-    return ((ref = env[node.token.value]) != null ? ref.get() : void 0) || node.accept(toStringVisitor);
-  };
-  self.run = function(ast) {
-    return "" + (ast.accept(self));
+    return ((ref = env[node.name]) != null ? ref.get() : void 0) || Runnable.create(node);
   };
   return self;
 };
 
-exports.create = function(env) {
-  if (env == null) {
-    env = envManager.getGlobal();
-  }
-  return createVisitor(env);
-};
 
 
-
-},{"AST":2,"env_manager":5,"future_eval":7,"visitor/to_string_visitor":15}],14:[function(require,module,exports){
+},{"AST":2,"env_manager":5,"future_eval":7,"runnable/lambda_abstraction":11,"runnable/runnable":12}],16:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier;
 
@@ -876,7 +853,7 @@ exports.create = function() {
 
 
 
-},{"AST":2,"constant":4}],15:[function(require,module,exports){
+},{"AST":2,"constant":4}],17:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -910,7 +887,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],16:[function(require,module,exports){
+},{"AST":2}],18:[function(require,module,exports){
 "use strict";
 var AST;
 
