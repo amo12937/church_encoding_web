@@ -16,6 +16,8 @@ interpreterProvider = require("visitor/interpreter");
 
 examplesAppender = require("views/append_examples");
 
+require("runner/reserved");
+
 reporter = {
   report: console.log.bind(console)
 };
@@ -75,7 +77,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":9,"tokenizer":22,"views/append_examples":23,"visitor/interpreter":24,"visitor/js_visitor":25,"visitor/to_string_visitor":26,"visitor/tree_view_visitor":27}],2:[function(require,module,exports){
+},{"parser":9,"runner/reserved":18,"tokenizer":20,"views/append_examples":21,"visitor/interpreter":22,"visitor/js_visitor":23,"visitor/to_string_visitor":25,"visitor/tree_view_visitor":26}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -209,11 +211,11 @@ exports.create = function() {
   Env = function() {
     return void 0;
   };
-  global = new Env;
   Env.prototype[CCK] = function() {
     Env.prototype = this;
     return new Env;
   };
+  global = new Env;
   return {
     getGlobal: function() {
       return global;
@@ -503,79 +505,6 @@ module.exports = (function() {
 
 },{}],11:[function(require,module,exports){
 "use strict";
-var BradeRunner, FalseIdentifierRunner, IdentifierRunner, LambdaAbstractionRunner, TrueIdentifierRunner, andCode, orCode,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
-
-IdentifierRunner = require("runner/identifier");
-
-BradeRunner = require("runner/brade");
-
-LambdaAbstractionRunner = require("runner/lambda_abstraction");
-
-module.exports = {
-  TrueIdentifierRunner: TrueIdentifierRunner,
-  FalseIdentifierRunner: FalseIdentifierRunner
-};
-
-TrueIdentifierRunner = (function(superClass) {
-  extend(TrueIdentifierRunner, superClass);
-
-  function TrueIdentifierRunner() {
-    return TrueIdentifierRunner.__super__.constructor.apply(this, arguments);
-  }
-
-  TrueIdentifierRunner.prototype.run = function(xThunk) {
-    var toS;
-    toS = function() {
-      return "\\y.x";
-    };
-    return BradeRunner.create(this.identifier, toS, function() {
-      return xThunk.get();
-    });
-  };
-
-  return TrueIdentifierRunner;
-
-})(IdentifierRunner);
-
-IdentifierRunner.register("true", TrueIdentifierRunner);
-
-FalseIdentifierRunner = (function(superClass) {
-  extend(FalseIdentifierRunner, superClass);
-
-  function FalseIdentifierRunner() {
-    return FalseIdentifierRunner.__super__.constructor.apply(this, arguments);
-  }
-
-  FalseIdentifierRunner.prototype.run = function() {
-    var toS;
-    toS = function() {
-      return "\\y.y";
-    };
-    return BradeRunner.create(this.identifier, toS, function(yThunk) {
-      return yThunk.get();
-    });
-  };
-
-  return FalseIdentifierRunner;
-
-})(IdentifierRunner);
-
-IdentifierRunner.register("false", FalseIdentifierRunner);
-
-andCode = "\\p q.p q false";
-
-IdentifierRunner.register("and", LambdaAbstractionRunner.runnerWithCode(andCode));
-
-orCode = "\\p q.p true q";
-
-IdentifierRunner.register("or", LambdaAbstractionRunner.runnerWithCode(orCode));
-
-
-
-},{"runner/brade":12,"runner/identifier":14,"runner/lambda_abstraction":17}],12:[function(require,module,exports){
-"use strict";
 var BradeRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
@@ -597,7 +526,7 @@ module.exports = BradeRunner = (function(superClass) {
 
 
 
-},{"runner/runner":20}],13:[function(require,module,exports){
+},{"runner/runner":19}],12:[function(require,module,exports){
 "use strict";
 var DefinitionRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -624,15 +553,17 @@ module.exports = DefinitionRunner = (function(superClass) {
 
 
 
-},{"runner/runner":20}],14:[function(require,module,exports){
+},{"runner/runner":19}],13:[function(require,module,exports){
 "use strict";
-var IdentifierRunner, Runner, reserved,
+var IdentifierRunner, Runner, runners, stdlib,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
 Runner = require("runner/runner");
 
-reserved = {};
+stdlib = null;
+
+runners = {};
 
 module.exports = IdentifierRunner = (function(superClass) {
   extend(IdentifierRunner, superClass);
@@ -642,6 +573,14 @@ module.exports = IdentifierRunner = (function(superClass) {
     IdentifierRunner.__super__.constructor.call(this, interpreter);
   }
 
+  IdentifierRunner.prototype.run = function(thunk) {
+    var r, ref;
+    if ((runners[this.name] != null) && (r = runners[this.name].run(thunk))) {
+      return r;
+    }
+    return ((ref = stdlib.env[this.name]) != null ? ref.get().run(thunk) : void 0) || thunk.get();
+  };
+
   IdentifierRunner.prototype.toString = function() {
     return this.name;
   };
@@ -650,37 +589,25 @@ module.exports = IdentifierRunner = (function(superClass) {
 
 })(Runner);
 
-IdentifierRunner.create = function(interpreter, name) {
-  var runnerProvider;
-  runnerProvider = reserved[name] || IdentifierRunner;
-  return (typeof runnerProvider.createMyself === "function" ? runnerProvider.createMyself(interpreter, name) : void 0) || Runner.create.call(runnerProvider, interpreter, name);
+IdentifierRunner.setStdlib = function(s) {
+  return stdlib = s;
 };
 
-IdentifierRunner.register = function(name, runner) {
-  return reserved[name] = runner;
+IdentifierRunner.register = function(name, runnerProvider) {
+  return runners[name] = runnerProvider.create(stdlib, name);
 };
 
 
 
-},{"runner/runner":20}],15:[function(require,module,exports){
+},{"runner/runner":19}],14:[function(require,module,exports){
 "use strict";
-var IdentifierRunner, LambdaAbstractionRunner, NumberRunner, PredIdentifierRunner, ast, code, parser, tokenizer,
+var IdentifierRunner, NumberRunner, PredIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
 IdentifierRunner = require("runner/identifier");
 
 NumberRunner = require("runner/number");
-
-LambdaAbstractionRunner = require("runner/lambda_abstraction");
-
-tokenizer = require("tokenizer");
-
-parser = require("parser");
-
-code = "\\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)";
-
-ast = parser.parse(tokenizer.tokenize(code)).exprs[0];
 
 module.exports = PredIdentifierRunner = (function(superClass) {
   extend(PredIdentifierRunner, superClass);
@@ -690,14 +617,12 @@ module.exports = PredIdentifierRunner = (function(superClass) {
   }
 
   PredIdentifierRunner.prototype.run = function(nThunk) {
-    var i, lmda, n;
-    i = this.interpreter;
+    var n, ref;
     n = nThunk.get();
     if (n instanceof NumberRunner) {
-      return NumberRunner.create(i, Math.max(0, n.value - 1));
+      return NumberRunner.create(this.interpreter, n.value - 1);
     }
-    lmda = LambdaAbstractionRunner.create(i, ast.arg, ast.body);
-    return lmda.run(nThunk);
+    return (ref = this.interpreter.env[this.name]) != null ? ref.get().run(nThunk) : void 0;
   };
 
   return PredIdentifierRunner;
@@ -708,19 +633,15 @@ IdentifierRunner.register("pred", PredIdentifierRunner);
 
 
 
-},{"parser":9,"runner/identifier":14,"runner/lambda_abstraction":17,"runner/number":18,"tokenizer":22}],16:[function(require,module,exports){
+},{"runner/identifier":13,"runner/number":17}],15:[function(require,module,exports){
 "use strict";
-var BradeRunner, FutureEval, IdentifierRunner, NumberRunner, SuccIdentifierRunner,
+var IdentifierRunner, NumberRunner, SuccIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
 IdentifierRunner = require("runner/identifier");
 
 NumberRunner = require("runner/number");
-
-BradeRunner = require("runner/brade");
-
-FutureEval = require("future_eval");
 
 module.exports = SuccIdentifierRunner = (function(superClass) {
   extend(SuccIdentifierRunner, superClass);
@@ -730,26 +651,12 @@ module.exports = SuccIdentifierRunner = (function(superClass) {
   }
 
   SuccIdentifierRunner.prototype.run = function(nThunk) {
-    var i, n, toS1;
-    i = this.interpreter;
+    var n, ref;
     n = nThunk.get();
     if (n instanceof NumberRunner) {
-      return NumberRunner.create(i, n.value + 1);
+      return NumberRunner.create(this.interpreter, n.value + 1);
     }
-    toS1 = function() {
-      return "\\f x.f (n f x)";
-    };
-    return BradeRunner.create(i, toS1, function(fThunk) {
-      var toS2;
-      toS2 = function() {
-        return "\\x.f (n f x)";
-      };
-      return BradeRunner.create(i, toS2, function(xThunk) {
-        return fThunk.get().run(FutureEval.createWithGetter(function() {
-          return n.run(fThunk).run(xThunk);
-        }));
-      });
-    });
+    return (ref = this.interpreter.env[this.name]) != null ? ref.get().run(nThunk) : void 0;
   };
 
   return SuccIdentifierRunner;
@@ -760,7 +667,7 @@ IdentifierRunner.register("succ", SuccIdentifierRunner);
 
 
 
-},{"future_eval":7,"runner/brade":12,"runner/identifier":14,"runner/number":18}],17:[function(require,module,exports){
+},{"runner/identifier":13,"runner/number":17}],16:[function(require,module,exports){
 "use strict";
 var AST, LambdaAbstractionRunner, Runner, parser, toStringVisitor, tokenizer,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -816,7 +723,7 @@ LambdaAbstractionRunner.runnerWithCode = function(code) {
 
 
 
-},{"AST":2,"parser":9,"runner/runner":20,"tokenizer":22,"visitor/to_string_visitor":26}],18:[function(require,module,exports){
+},{"AST":2,"parser":9,"runner/runner":19,"tokenizer":20,"visitor/to_string_visitor":25}],17:[function(require,module,exports){
 "use strict";
 var BradeRunner, FutureEval, NumberRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -871,19 +778,23 @@ module.exports = NumberRunner = (function(superClass) {
 
 
 
-},{"future_eval":7,"runner/brade":12,"runner/runner":20}],19:[function(require,module,exports){
+},{"future_eval":7,"runner/brade":11,"runner/runner":19}],18:[function(require,module,exports){
 "use strict";
+var IdentifierRunner, stdlib;
+
+stdlib = require("visitor/stdlib");
+
+IdentifierRunner = require("runner/identifier");
+
+IdentifierRunner.setStdlib(stdlib);
+
 require("runner/identifier/succ");
 
 require("runner/identifier/pred");
 
-require("runner/bool");
-
-require("runner/symbol/plus");
 
 
-
-},{"runner/bool":11,"runner/identifier/pred":15,"runner/identifier/succ":16,"runner/symbol/plus":21}],20:[function(require,module,exports){
+},{"runner/identifier":13,"runner/identifier/pred":14,"runner/identifier/succ":15,"visitor/stdlib":24}],19:[function(require,module,exports){
 "use strict";
 var Runner,
   slice = [].slice;
@@ -908,62 +819,7 @@ Runner.create = function() {
 
 
 
-},{}],21:[function(require,module,exports){
-"use strict";
-var BradeRunner, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, PlusSymbolRunner, ast, code, parser, tokenizer,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
-
-IdentifierRunner = require("runner/identifier");
-
-NumberRunner = require("runner/number");
-
-LambdaAbstractionRunner = require("runner/lambda_abstraction");
-
-BradeRunner = require("runner/brade");
-
-tokenizer = require("tokenizer");
-
-parser = require("parser");
-
-code = "\\m n f x.m f (n f x)";
-
-ast = parser.parse(tokenizer.tokenize(code)).exprs[0];
-
-module.exports = PlusSymbolRunner = (function(superClass) {
-  extend(PlusSymbolRunner, superClass);
-
-  function PlusSymbolRunner() {
-    return PlusSymbolRunner.__super__.constructor.apply(this, arguments);
-  }
-
-  PlusSymbolRunner.prototype.run = function(mThunk) {
-    var i, toS;
-    i = this.interpreter;
-    toS = function() {
-      return "\\n f x.m f (n f x)";
-    };
-    return BradeRunner.create(i, toS, function(nThunk) {
-      var lmda, m, n;
-      m = mThunk.get();
-      n = nThunk.get();
-      if (m instanceof NumberRunner && n instanceof NumberRunner) {
-        return NumberRunner.create(i, m.value + n.value);
-      }
-      lmda = LambdaAbstraction.create(i, ast.arg, ast.body);
-      return lmda.run(mThunk).run(nThunk);
-    });
-  };
-
-  return PlusSymbolRunner;
-
-})(IdentifierRunner);
-
-IdentifierRunner.register("+", PlusSymbolRunner);
-
-
-
-},{"parser":9,"runner/brade":12,"runner/identifier":14,"runner/lambda_abstraction":17,"runner/number":18,"tokenizer":22}],22:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, updateLocation, whitespaceToken;
 
@@ -1150,7 +1006,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":8}],23:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":8}],21:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -1175,9 +1031,9 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":6}],24:[function(require,module,exports){
+},{"examples":6}],22:[function(require,module,exports){
 "use strict";
-var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, Runner, createInterpreter, envManager;
+var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, createInterpreter, envManager;
 
 AST = require("AST");
 
@@ -1189,8 +1045,6 @@ CREATE_CHILD_KEY = EnvManager.CREATE_CHILD_KEY;
 
 envManager = EnvManager.create();
 
-Runner = require("runner/runner");
-
 LambdaAbstractionRunner = require("runner/lambda_abstraction");
 
 DefinitionRunner = require("runner/definition");
@@ -1198,8 +1052,6 @@ DefinitionRunner = require("runner/definition");
 IdentifierRunner = require("runner/identifier");
 
 NumberRunner = require("runner/number");
-
-require("runner/reserved");
 
 exports.create = createInterpreter = function(env) {
   var self, visit;
@@ -1241,7 +1093,7 @@ exports.create = createInterpreter = function(env) {
 
 
 
-},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":13,"runner/identifier":14,"runner/lambda_abstraction":17,"runner/number":18,"runner/reserved":19,"runner/runner":20}],25:[function(require,module,exports){
+},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":16,"runner/number":17}],23:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier;
 
@@ -1289,7 +1141,27 @@ exports.create = function() {
 
 
 
-},{"AST":2,"constant":4}],26:[function(require,module,exports){
+},{"AST":2,"constant":4}],24:[function(require,module,exports){
+"use strict";
+var Interpreter, codes, envManager, parser, stdlib, tokenizer;
+
+Interpreter = require("visitor/interpreter");
+
+envManager = require("env_manager").create();
+
+tokenizer = require("tokenizer");
+
+parser = require("parser");
+
+module.exports = stdlib = Interpreter.create(envManager.getGlobal());
+
+codes = ["succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q.p q false", "or     := \\p q.p true q", "isZero := \\n.n (\\x.false) true", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false"];
+
+parser.parse(tokenizer.tokenize(codes.join("\n"))).accept(stdlib);
+
+
+
+},{"env_manager":5,"parser":9,"tokenizer":20,"visitor/interpreter":22}],25:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -1323,7 +1195,7 @@ exports.create = function() {
 
 
 
-},{"AST":2}],27:[function(require,module,exports){
+},{"AST":2}],26:[function(require,module,exports){
 "use strict";
 var AST;
 
