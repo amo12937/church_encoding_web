@@ -1,4 +1,4 @@
-pre, code, var, samp, kbd, .mono {
+pre, code, var, samp, kbd, .code {
   font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
   font-size: 14px;
   line-height: 1.2; }
