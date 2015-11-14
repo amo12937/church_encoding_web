@@ -79,7 +79,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":9,"runner/reserved":20,"tokenizer":24,"views/append_examples":25,"visitor/interpreter":26,"visitor/js_visitor":27,"visitor/to_string_visitor":29,"visitor/tree_view_visitor":30}],2:[function(require,module,exports){
+},{"parser":9,"runner/reserved":20,"tokenizer":25,"views/append_examples":26,"visitor/interpreter":27,"visitor/js_visitor":28,"visitor/to_string_visitor":30,"visitor/tree_view_visitor":31}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -93,7 +93,8 @@ module.exports = prefixedKV("AST", {
   "IDENTIFIER": "IDENTIFIER",
   NUMBER: {
     "NATURAL": "NATURAL"
-  }
+  },
+  "STRING": "STRING"
 });
 
 
@@ -114,6 +115,7 @@ module.exports = prefixedKV("TOKEN", {
   NUMBER: {
     "NATURAL": "NATURAL"
   },
+  "STRING": "STRING",
   "LINE_BREAK": "LINE_BREAK",
   "INDENT": "INDENT",
   "EOF": "EOF",
@@ -288,7 +290,7 @@ module.exports = {
 
 },{}],9:[function(require,module,exports){
 "use strict";
-var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, naturalNumberNode, parseApplication, parseApplicationWithBrackets, parseDefinition, parseExpr, parseIdentifier, parseLambdaAbstraction, parseMultiline,
+var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, naturalNumberNode, parseApplication, parseApplicationWithBrackets, parseConstant, parseDefinition, parseExpr, parseLambdaAbstraction, parseMultiline, stringNode,
   slice = [].slice;
 
 TOKEN = require("TOKEN");
@@ -344,7 +346,7 @@ parseApplication = function(lexer) {
 };
 
 parseExpr = function(lexer) {
-  return parseApplicationWithBrackets(lexer) || parseLambdaAbstraction(lexer) || parseDefinition(lexer) || parseIdentifier(lexer);
+  return parseApplicationWithBrackets(lexer) || parseLambdaAbstraction(lexer) || parseDefinition(lexer) || parseConstant(lexer);
 };
 
 parseApplicationWithBrackets = function(lexer) {
@@ -411,7 +413,7 @@ parseDefinition = function(lexer) {
   return rewind();
 };
 
-parseIdentifier = function(lexer) {
+parseConstant = function(lexer) {
   var rewind, token;
   rewind = lexer.memento();
   token = lexer.next();
@@ -420,6 +422,8 @@ parseIdentifier = function(lexer) {
       return identifierNode(token.value);
     case TOKEN.NUMBER.NATURAL:
       return naturalNumberNode(token.value);
+    case TOKEN.STRING:
+      return stringNode(token.value, token.text);
     default:
       return rewind();
   }
@@ -477,6 +481,15 @@ exports.naturalNumberNode = naturalNumberNode = function(value) {
   return {
     tag: AST.NUMBER.NATURAL,
     value: +value,
+    accept: acceptor
+  };
+};
+
+exports.stringNode = stringNode = function(value, text) {
+  return {
+    tag: AST.STRING,
+    value: value,
+    text: text,
     accept: acceptor
   };
 };
@@ -790,7 +803,7 @@ LambdaAbstractionRunner.runnerWithCode = function(code) {
 
 
 
-},{"AST":2,"parser":9,"runner/runner":21,"tokenizer":24,"visitor/to_string_visitor":29}],19:[function(require,module,exports){
+},{"AST":2,"parser":9,"runner/runner":21,"tokenizer":25,"visitor/to_string_visitor":30}],19:[function(require,module,exports){
 "use strict";
 var BradeRunner, FutureEval, NumberRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -869,7 +882,7 @@ require("runner/symbol/mult");
 
 
 
-},{"runner/identifier":13,"runner/identifier/isnil":14,"runner/identifier/nil":15,"runner/identifier/pred":16,"runner/identifier/succ":17,"runner/symbol/mult":22,"runner/symbol/plus":23,"visitor/stdlib":28}],21:[function(require,module,exports){
+},{"runner/identifier":13,"runner/identifier/isnil":14,"runner/identifier/nil":15,"runner/identifier/pred":16,"runner/identifier/succ":17,"runner/symbol/mult":23,"runner/symbol/plus":24,"visitor/stdlib":29}],21:[function(require,module,exports){
 "use strict";
 var Runner,
   slice = [].slice;
@@ -895,6 +908,50 @@ Runner.create = function() {
 
 
 },{}],22:[function(require,module,exports){
+"use strict";
+var FutureEval, NumberRunner, Runner, StringRunner,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Runner = require("runner/runner");
+
+NumberRunner = require("runner/number");
+
+FutureEval = require("future_eval");
+
+module.exports = StringRunner = (function(superClass) {
+  extend(StringRunner, superClass);
+
+  function StringRunner(interpreter, text) {
+    this.text = text;
+    StringRunner.__super__.constructor.call(this, interpreter);
+  }
+
+  StringRunner.prototype.run = function(pThunk) {
+    var i, t;
+    i = this.interpreter;
+    t = this.text;
+    if (t === "") {
+      return this;
+    }
+    return pThunk.get().run(FutureEval.createWithGetter(function() {
+      return NumberRunner.create(i, t.charCodeAt(0));
+    })).run(FutureEval.createWithGetter(function() {
+      return StringRunner.create(i, t.slice(1));
+    }));
+  };
+
+  StringRunner.prototype.toString = function() {
+    return "\"" + this.text + "\"";
+  };
+
+  return StringRunner;
+
+})(Runner);
+
+
+
+},{"future_eval":7,"runner/number":19,"runner/runner":21}],23:[function(require,module,exports){
 "use strict";
 var BradeRunner, IdentifierRunner, MultSymbolRunner, NumberRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -939,7 +996,7 @@ IdentifierRunner.register("*", MultSymbolRunner);
 
 
 
-},{"runner/brade":11,"runner/identifier":13,"runner/number":19}],23:[function(require,module,exports){
+},{"runner/brade":11,"runner/identifier":13,"runner/number":19}],24:[function(require,module,exports){
 "use strict";
 var BradeRunner, IdentifierRunner, NumberRunner, PlusSymbolRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -984,9 +1041,9 @@ IdentifierRunner.register("+", PlusSymbolRunner);
 
 
 
-},{"runner/brade":11,"runner/identifier":13,"runner/number":19}],24:[function(require,module,exports){
+},{"runner/brade":11,"runner/identifier":13,"runner/number":19}],25:[function(require,module,exports){
 "use strict";
-var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, updateLocation, whitespaceToken;
+var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, STRING, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, stringToken, updateLocation, whitespaceToken;
 
 TOKEN = require("TOKEN");
 
@@ -999,17 +1056,17 @@ exports.tokenize = function(code) {
   line = 0;
   column = 0;
   brackets = [];
-  addToken = function(tag, value, length) {
-    var token;
+  addToken = function(tag, value, length, token) {
     if (length == null) {
       length = value.length;
     }
-    token = {
-      tag: tag,
-      value: value,
-      line: line,
-      column: column
-    };
+    if (token == null) {
+      token = {};
+    }
+    token.tag = tag;
+    token.value = value;
+    token.line = line;
+    token.column = column;
     tokens.push(token);
     return length;
   };
@@ -1035,7 +1092,7 @@ exports.tokenize = function(code) {
   };
   i = 0;
   while (context.chunk = code.slice(i)) {
-    consumed = commentToken(context) || whitespaceToken(context) || lineToken(context) || literalToken(context) || identifierToken(context) || naturalNumberToken(context) || errorToken(context);
+    consumed = commentToken(context) || whitespaceToken(context) || lineToken(context) || literalToken(context) || identifierToken(context) || naturalNumberToken(context) || stringToken(context) || errorToken(context);
     i += consumed;
     ref = updateLocation(line, column, context.chunk, consumed), line = ref[0], column = ref[1];
   }
@@ -1129,8 +1186,7 @@ identifierToken = function(c) {
   if (!(match = c.chunk.match(IDENTIFIER))) {
     return 0;
   }
-  c.addToken(TOKEN.IDENTIFIER, match[0]);
-  return match[0].length;
+  return c.addToken(TOKEN.IDENTIFIER, match[0]);
 };
 
 NATURAL_NUMBER = /^(?:0|[1-9]\d*)(?![_a-zA-Z])/;
@@ -1140,8 +1196,20 @@ naturalNumberToken = function(c) {
   if (!(match = c.chunk.match(NATURAL_NUMBER))) {
     return 0;
   }
-  c.addToken(TOKEN.NUMBER.NATURAL, match[0]);
-  return match[0].length;
+  return c.addToken(TOKEN.NUMBER.NATURAL, match[0]);
+};
+
+STRING = /^(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/;
+
+stringToken = function(c) {
+  var match, s;
+  if (!(match = c.chunk.match(STRING))) {
+    return 0;
+  }
+  s = match[0];
+  return c.addToken(TOKEN.STRING, s, s.length, {
+    text: eval(s)
+  });
 };
 
 ERROR = /^\S+/;
@@ -1151,8 +1219,7 @@ errorToken = function(c) {
   if (!(match = c.chunk.match(ERROR))) {
     return 0;
   }
-  c.addToken(TOKEN.ERROR.UNKNOWN_TOKEN, match[0]);
-  return match[0].length;
+  return c.addToken(TOKEN.ERROR.UNKNOWN_TOKEN, match[0]);
 };
 
 updateLocation = function(l, c, chunk, offset) {
@@ -1171,7 +1238,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":8}],25:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":8}],26:[function(require,module,exports){
 "use strict";
 var examples;
 
@@ -1196,9 +1263,9 @@ exports.createFragment = function(d, seed, key, click) {
 
 
 
-},{"examples":6}],26:[function(require,module,exports){
+},{"examples":6}],27:[function(require,module,exports){
 "use strict";
-var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, createInterpreter, envManager;
+var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, StringRunner, createInterpreter, envManager;
 
 AST = require("AST");
 
@@ -1217,6 +1284,8 @@ DefinitionRunner = require("runner/definition");
 IdentifierRunner = require("runner/identifier");
 
 NumberRunner = require("runner/number");
+
+StringRunner = require("runner/string");
 
 exports.create = createInterpreter = function(env) {
   var self, visit;
@@ -1253,12 +1322,15 @@ exports.create = createInterpreter = function(env) {
   visit[AST.NUMBER.NATURAL] = function(node) {
     return NumberRunner.create(self, node.value);
   };
+  visit[AST.STRING] = function(node) {
+    return StringRunner.create(self, node.text);
+  };
   return self;
 };
 
 
 
-},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":18,"runner/number":19}],27:[function(require,module,exports){
+},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":18,"runner/number":19,"runner/string":22}],28:[function(require,module,exports){
 "use strict";
 var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier;
 
@@ -1301,12 +1373,18 @@ exports.create = function() {
   visit[AST.IDENTIFIER] = function(node) {
     return normalizeIdentifier(node.name);
   };
+  visit[AST.NUMBER.NATURAL] = function(node) {
+    return normalizeIdentifier("" + node.value);
+  };
+  visit[AST.STRING] = function(node) {
+    return node.value;
+  };
   return self;
 };
 
 
 
-},{"AST":2,"constant":4}],28:[function(require,module,exports){
+},{"AST":2,"constant":4}],29:[function(require,module,exports){
 "use strict";
 var Interpreter, codes, envManager, parser, stdlib, tokenizer;
 
@@ -1326,7 +1404,7 @@ parser.parse(tokenizer.tokenize(codes.join("\n"))).accept(stdlib);
 
 
 
-},{"env_manager":5,"parser":9,"tokenizer":24,"visitor/interpreter":26}],29:[function(require,module,exports){
+},{"env_manager":5,"parser":9,"tokenizer":25,"visitor/interpreter":27}],30:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -1355,12 +1433,18 @@ exports.create = function() {
   visit[AST.IDENTIFIER] = function(node) {
     return node.name;
   };
+  visit[AST.NUMBER.NATURAL] = function(node) {
+    return node.value;
+  };
+  visit[AST.STRING] = function(node) {
+    return node.value;
+  };
   return self;
 };
 
 
 
-},{"AST":2}],30:[function(require,module,exports){
+},{"AST":2}],31:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -1418,6 +1502,12 @@ exports.create = function(reporter, tab) {
   };
   visit[AST.IDENTIFIER] = function(node) {
     return puts(node.name);
+  };
+  visit[AST.NUMBER.NATURAL] = function(node) {
+    return puts(node.value);
+  };
+  visit[AST.STRING] = function(node) {
+    return puts(node.value);
   };
   return self;
 };
