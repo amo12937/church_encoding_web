@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var interpreter, interpreterProvider, parser, reporter, tokenizer;
+var Reporter, createFragment, createP, interpreter, interpreterProvider, parser, tokenizer;
 
 tokenizer = require("tokenizer");
 
@@ -10,30 +10,75 @@ interpreterProvider = require("visitor/interpreter");
 
 require("runner/reserved");
 
-reporter = {
-  report: console.log.bind(console)
+createFragment = function(d, cls, items) {
+  var $fragment, item, j, len;
+  $fragment = d.createDocumentFragment();
+  for (j = 0, len = items.length; j < len; j++) {
+    item = items[j];
+    if (item.trim() !== "") {
+      $fragment.appendChild(createP(d, cls, item));
+    }
+  }
+  return $fragment;
+};
+
+createP = function(d, cls, text) {
+  var $p;
+  $p = d.createElement("p");
+  $p.textContent = text;
+  $p.classList.add(cls);
+  return $p;
+};
+
+Reporter = function(d, $result) {
+  return {
+    code: {
+      report: function(code) {
+        return $result.appendChild(createFragment(d, "ce-out-code", code.split("\n")));
+      }
+    },
+    result: {
+      report: function(result) {
+        return $result.appendChild(createFragment(d, "ce-out-result", result.split("\n")));
+      }
+    }
+  };
 };
 
 interpreter = interpreterProvider.create();
 
 window.addEventListener("load", function() {
-  var $input, $result, compile;
+  var $input, $result, compile, i, reporter;
   $input = document.getElementById("input");
   $result = document.getElementById("result");
+  reporter = Reporter(document, $result);
+  i = 0;
   compile = function(code) {
     var lexer, result;
-    console.time("tokenizer");
+    reporter.code.report(code);
+    console.log("[" + i + "] code =");
+    console.log(code);
+    console.time("[" + i + "] tokenizer");
     lexer = tokenizer.tokenize(code);
-    console.timeEnd("tokenizer");
-    console.time("parser");
+    console.timeEnd("[" + i + "] tokenizer");
+    console.time("[" + i + "] parser");
     result = parser.parse(lexer);
-    console.timeEnd("parser");
-    console.time("interpreter");
-    reporter.report(result.accept(interpreter));
-    return console.timeEnd("interpreter");
+    console.timeEnd("[" + i + "] parser");
+    console.time("[" + i + "] interpreter");
+    reporter.result.report(result.accept(interpreter));
+    console.timeEnd("[" + i + "] interpreter");
+    return i += 1;
   };
-  return $input.addEventListener("change", function() {
-    return compile($input.value);
+  return $input.addEventListener("keypress", function(e) {
+    if (e.keyCode !== 13) {
+      return;
+    }
+    if (e.shiftKey) {
+      return;
+    }
+    compile($input.value);
+    $input.value = "";
+    return e.preventDefault();
   });
 });
 

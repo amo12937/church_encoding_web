@@ -40,6 +40,14 @@ body {
   font-size: 14px;
   line-height: 1.2; }
 
+.ce-out-code:before {
+  content: ">";
+  padding: 0 7px 0 0; }
+
+.ce-out-result:before {
+  content: "=";
+  padding: 0 7px 0 0; }
+
 .ce-console-container {
   display: -webkit-box;
   display: -webkit-flex;
@@ -61,10 +69,6 @@ body {
     -webkit-flex-direction: column;
         -ms-flex-direction: column;
             flex-direction: column;
-    -webkit-box-align: stretch;
-    -webkit-align-items: stretch;
-        -ms-flex-align: stretch;
-            align-items: stretch;
     -webkit-box-pack: end;
     -webkit-justify-content: flex-end;
         -ms-flex-pack: end;
@@ -72,11 +76,31 @@ body {
     -webkit-flex-basis: 100%;
         -ms-flex-preferred-size: 100%;
             flex-basis: 100%;
-    margin: 0 0 10px;
-    padding: 0 0 5px 14px;
-    border-bottom: 2px solid #000; }
-    .ce-console-container .ce-console-result p {
-      margin: 2px; }
+    overflow: auto;
+    padding: 0 0 5px;
+    border-bottom: 2px solid #000;
+    margin: 0 0 10px; }
+    .ce-console-container .ce-console-result .ce-console-result-inner {
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+      -webkit-flex-direction: column;
+          -ms-flex-direction: column;
+              flex-direction: column;
+      -webkit-box-align: stretch;
+      -webkit-align-items: stretch;
+          -ms-flex-align: stretch;
+              align-items: stretch;
+      -webkit-box-pack: end;
+      -webkit-justify-content: flex-end;
+          -ms-flex-pack: end;
+              justify-content: flex-end;
+      height: auto; }
+      .ce-console-container .ce-console-result .ce-console-result-inner p {
+        margin: 2px 2px 2px 0; }
   .ce-console-container .ce-console-input-container {
     display: -webkit-box;
     display: -webkit-flex;
@@ -89,10 +113,10 @@ body {
             flex-direction: row;
     width: 100%; }
     .ce-console-container .ce-console-input-container .ce-console-input-mark {
-      width: 14px;
       padding: 2px 0; }
       .ce-console-container .ce-console-input-container .ce-console-input-mark:before {
-        content: ">"; }
+        content: ">";
+        padding: 0 7px 0 0; }
     .ce-console-container .ce-console-input-container textarea {
       margin: 0;
       padding: 2px;
