@@ -1,16 +1,102 @@
-pre, code, var, samp, kbd, .code {
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline; }
+
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
+  display: block; }
+
+body {
+  line-height: 1; }
+
+ol, ul {
+  list-style: none; }
+
+blockquote, q {
+  quotes: none; }
+
+blockquote:before, blockquote:after, q:before, q:after {
+  content: '';
+  content: none; }
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0; }
+
+body {
+  margin: 10px;
+  background: #eee; }
+
+.ce-code {
   font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
   font-size: 14px;
   line-height: 1.2; }
 
-a {
-  text-decoration: none;
-  color: #000; }
-  a:hover {
-    color: #f00; }
-  a:before {
-    content: "> "; }
-
-#input {
-  width: 100%;
-  height: 200px; }
+.ce-console-container {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  height: 100%; }
+  .ce-console-container .ce-console-result {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    -webkit-box-align: stretch;
+    -webkit-align-items: stretch;
+        -ms-flex-align: stretch;
+            align-items: stretch;
+    -webkit-box-pack: end;
+    -webkit-justify-content: flex-end;
+        -ms-flex-pack: end;
+            justify-content: flex-end;
+    -webkit-flex-basis: 100%;
+        -ms-flex-preferred-size: 100%;
+            flex-basis: 100%;
+    margin: 0 0 10px;
+    padding: 0 0 5px 14px;
+    border-bottom: 2px solid #000; }
+    .ce-console-container .ce-console-result p {
+      margin: 2px; }
+  .ce-console-container .ce-console-input-container {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: horizontal;
+    -webkit-box-direction: normal;
+    -webkit-flex-direction: row;
+        -ms-flex-direction: row;
+            flex-direction: row;
+    width: 100%; }
+    .ce-console-container .ce-console-input-container .ce-console-input-mark {
+      width: 14px;
+      padding: 2px 0; }
+      .ce-console-container .ce-console-input-container .ce-console-input-mark:before {
+        content: ">"; }
+    .ce-console-container .ce-console-input-container textarea {
+      margin: 0;
+      padding: 2px;
+      width: 100%;
+      border: 0; }
+      .ce-console-container .ce-console-input-container textarea:focus {
+        border: 0; }

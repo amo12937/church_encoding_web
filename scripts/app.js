@@ -1,20 +1,12 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-var createResultFragment, examplesAppender, interpreter, interpreterProvider, jsVisitor, jsVisitorProvider, parser, reporter, toStringVisitor, toStringVisitorProvider, tokenizer, visitor, visitorProvider;
+var interpreter, interpreterProvider, parser, reporter, tokenizer;
 
 tokenizer = require("tokenizer");
 
 parser = require("parser");
 
-visitorProvider = require("visitor/tree_view_visitor");
-
-jsVisitorProvider = require("visitor/js_visitor");
-
-toStringVisitorProvider = require("visitor/to_string_visitor");
-
 interpreterProvider = require("visitor/interpreter");
-
-examplesAppender = require("views/append_examples");
 
 require("runner/reserved");
 
@@ -22,33 +14,14 @@ reporter = {
   report: console.log.bind(console)
 };
 
-visitor = visitorProvider.create(reporter);
-
-jsVisitor = jsVisitorProvider.create();
-
-toStringVisitor = toStringVisitorProvider.create();
-
 interpreter = interpreterProvider.create();
 
-createResultFragment = function(d, results) {
-  var $fragment;
-  $fragment = d.createDocumentFragment();
-  results.forEach(function(result) {
-    var $p;
-    $p = d.createElement("p");
-    $p.textContent = result;
-    return $fragment.appendChild($p);
-  });
-  return $fragment;
-};
-
 window.addEventListener("load", function() {
-  var $examples, $input, $result, compile;
-  $examples = document.getElementById("examples");
+  var $input, $result, compile;
   $input = document.getElementById("input");
   $result = document.getElementById("result");
   compile = function(code) {
-    var $fragment, lexer, result;
+    var lexer, result;
     console.time("tokenizer");
     lexer = tokenizer.tokenize(code);
     console.timeEnd("tokenizer");
@@ -57,21 +30,8 @@ window.addEventListener("load", function() {
     console.timeEnd("parser");
     console.time("interpreter");
     reporter.report(result.accept(interpreter));
-    console.timeEnd("interpreter");
-    $result.textContent = null;
-    $fragment = createResultFragment(document, result.accept(jsVisitor).split("\n"));
-    return $result.appendChild($fragment);
+    return console.timeEnd("interpreter");
   };
-  (function() {
-    var $fragment, key, seed;
-    seed = $examples.getAttribute("data-seed");
-    key = $examples.getAttribute("data-key");
-    $fragment = examplesAppender.createFragment(document, seed, key, function(example) {
-      $input.value = ((($input.value || "").trim()) + "\n" + example).trim();
-      return compile($input.value);
-    });
-    return $examples.appendChild($fragment);
-  })();
   return $input.addEventListener("change", function() {
     return compile($input.value);
   });
@@ -79,7 +39,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":9,"runner/reserved":20,"tokenizer":25,"views/append_examples":26,"visitor/interpreter":27,"visitor/js_visitor":28,"visitor/to_string_visitor":30,"visitor/tree_view_visitor":31}],2:[function(require,module,exports){
+},{"parser":7,"runner/reserved":18,"tokenizer":23,"visitor/interpreter":24}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -99,7 +59,7 @@ module.exports = prefixedKV("AST", {
 
 
 
-},{"prefixed_kv":10}],3:[function(require,module,exports){
+},{"prefixed_kv":8}],3:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -127,84 +87,7 @@ module.exports = prefixedKV("TOKEN", {
 
 
 
-},{"prefixed_kv":10}],4:[function(require,module,exports){
-"use strict";
-var CS_KEYWORDS, JS_KEYWORDS;
-
-JS_KEYWORDS = {
-  "break": "break",
-  "case": "case",
-  "catch": "catch",
-  "const": "const",
-  "continue": "continue",
-  "debugger": "debugger",
-  "default": "default",
-  "delete": "delete",
-  "do": "do",
-  "else": "else",
-  "enum": "enum",
-  "export": "export",
-  "false": "false",
-  "finally": "finally",
-  "for": "for",
-  "function": "function",
-  "if": "if",
-  "implements": "implements",
-  "import": "import",
-  "in": "in",
-  "instanceof": "instanceof",
-  "interface": "interface",
-  "let": "let",
-  "native": "native",
-  "new": "new",
-  "null": "null",
-  "package": "package",
-  "private": "private",
-  "protected": "protected",
-  "public": "public",
-  "return": "return",
-  "static": "static",
-  "switch": "switch",
-  "this": "this",
-  "throw": "throw",
-  "true": "true",
-  "try": "try",
-  "typeof": "typeof",
-  "undefined": "undefined",
-  "var": "var",
-  "void": "void",
-  "while": "while",
-  "with": "with",
-  "yield": "yield"
-};
-
-CS_KEYWORDS = {
-  "and": "and",
-  "by": "by",
-  "is": "is",
-  "isnt": "isnt",
-  "loop": "loop",
-  "no": "no",
-  "not": "not",
-  "of": "of",
-  "off": "off",
-  "on": "on",
-  "or": "or",
-  "then": "then",
-  "unless": "unless",
-  "until": "until",
-  "when": "when",
-  "yes": "yes"
-};
-
-module.exports = {
-  JS_KEYWORDS: JS_KEYWORDS,
-  CS_KEYWORDS: CS_KEYWORDS
-};
-
-
-
-},{}],5:[function(require,module,exports){
+},{"prefixed_kv":8}],4:[function(require,module,exports){
 "use strict";
 var CCK;
 
@@ -229,13 +112,7 @@ exports.create = function() {
 
 
 
-},{}],6:[function(require,module,exports){
-"use strict";
-module.exports = [[0, "_0     := \\f x.x", "[_0{f{x x}}]"], [1, "_1     := \\f x.f x", "[_1{f{x(f x)}}]"], [2, "_2     := \\f x.f (f x)", "[_2{f{x(f(f x))}}]"], [3, "succ   := \\n f x.f (n f x)", "[succ{n{f{x(f((n f)x))}}}]"], [4, "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "[pred{n{f{x(((n{g{h(h(g f))}}){u x}){v v})}}}]"], [5, "add    := \\m n f x.m f (n f x)", "[add{m{n{f{x((m f)((n f)x))}}}}]"], [6, "mul    := \\m n f.m (n f)", "[mul{m{n{f(m(n f))}}}]"], [7, "exp    := \\m n.n m", "[exp{m{n(n m)}}]"], [8, "true   := \\x y.x", "[true{x{y x}}]"], [9, "false  := \\x y.y", "[false{x{y y}}]"], [10, "and    := \\p q x y.p (q x y) y", "[and{p{q{x{y((p((q x)y))y)}}}}]"], [11, "or     := \\p q x y.p x (q x y)", "[or{p{q{x{y((p x)((q x)y))}}}}]"], [12, "not    := \\p x y.p y x", "[not{p{x{y((p y)x)}}}]"], [13, "if     := \\p x y.p x y", "[if{p{x{y((p x)y)}}}]"], [14, "isZero := \\n.n (\\x. false) true", "[isZero{n((n{x false})true)}]"], [15, "pair   := \\a b p.p a b", "[pair{a{b{p((p a)b)}}}]"], [16, "first  := \\p.p true", "[first{p(p true)}]"], [17, "second := \\p.p false", "[second{p(p false)}]"], [18, "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "[Y{f({x(f(x x))}{x(f(x x))})}]"], [19, "Z      := \\f.(\\x.f (\\y.x x y)) (\\x.f (\\y.x x y))", "[Z{f({x(f{y((x x)y)})}{x(f{y((x x)y)})})}]"], [20, "fact   := Y (\\f r n.isZero n r (f (mul r n) (pred n))) 1", "[fact((Y{f{r{n(((isZero n)r)((f((mul r)n))(pred n)))}}})1)]"]];
-
-
-
-},{}],7:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 exports.create = function(node, visitor) {
   return this.createWithGetter(function() {
@@ -255,7 +132,7 @@ exports.createWithGetter = function(getter) {
 
 
 
-},{}],8:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 "use strict";
 var create;
 
@@ -288,7 +165,7 @@ module.exports = {
 
 
 
-},{}],9:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, naturalNumberNode, parseApplication, parseApplicationWithBrackets, parseConstant, parseDefinition, parseExpr, parseLambdaAbstraction, parseMultiline, stringNode,
   slice = [].slice;
@@ -496,7 +373,7 @@ exports.stringNode = stringNode = function(value, text) {
 
 
 
-},{"AST":2,"TOKEN":3}],10:[function(require,module,exports){
+},{"AST":2,"TOKEN":3}],8:[function(require,module,exports){
 "use strict";
 module.exports = (function() {
   var prefixedKV;
@@ -518,7 +395,7 @@ module.exports = (function() {
 
 
 
-},{}],11:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 "use strict";
 var BradeRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -541,7 +418,7 @@ module.exports = BradeRunner = (function(superClass) {
 
 
 
-},{"runner/runner":21}],12:[function(require,module,exports){
+},{"runner/runner":19}],10:[function(require,module,exports){
 "use strict";
 var DefinitionRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -568,7 +445,7 @@ module.exports = DefinitionRunner = (function(superClass) {
 
 
 
-},{"runner/runner":21}],13:[function(require,module,exports){
+},{"runner/runner":19}],11:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, Runner, runners, stdlib,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -618,7 +495,7 @@ IdentifierRunner.register = function(name, runnerProvider) {
 
 
 
-},{"runner/runner":21}],14:[function(require,module,exports){
+},{"runner/runner":19}],12:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, IsnilIdentifierRunner, NilIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -652,7 +529,7 @@ IdentifierRunner.register("isnil", IsnilIdentifierRunner);
 
 
 
-},{"runner/identifier":13,"runner/identifier/nil":15}],15:[function(require,module,exports){
+},{"runner/identifier":11,"runner/identifier/nil":13}],13:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, NilIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -679,7 +556,7 @@ IdentifierRunner.register("nil", NilIdentifierRunner);
 
 
 
-},{"runner/identifier":13}],16:[function(require,module,exports){
+},{"runner/identifier":11}],14:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, NumberRunner, PredIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -713,7 +590,7 @@ IdentifierRunner.register("pred", PredIdentifierRunner);
 
 
 
-},{"runner/identifier":13,"runner/number":19}],17:[function(require,module,exports){
+},{"runner/identifier":11,"runner/number":17}],15:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, NumberRunner, SuccIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -747,7 +624,7 @@ IdentifierRunner.register("succ", SuccIdentifierRunner);
 
 
 
-},{"runner/identifier":13,"runner/number":19}],18:[function(require,module,exports){
+},{"runner/identifier":11,"runner/number":17}],16:[function(require,module,exports){
 "use strict";
 var AST, LambdaAbstractionRunner, Runner, parser, toStringVisitor, tokenizer,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -803,7 +680,7 @@ LambdaAbstractionRunner.runnerWithCode = function(code) {
 
 
 
-},{"AST":2,"parser":9,"runner/runner":21,"tokenizer":25,"visitor/to_string_visitor":30}],19:[function(require,module,exports){
+},{"AST":2,"parser":7,"runner/runner":19,"tokenizer":23,"visitor/to_string_visitor":26}],17:[function(require,module,exports){
 "use strict";
 var BradeRunner, FutureEval, NumberRunner, Runner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -858,7 +735,7 @@ module.exports = NumberRunner = (function(superClass) {
 
 
 
-},{"future_eval":7,"runner/brade":11,"runner/runner":21}],20:[function(require,module,exports){
+},{"future_eval":5,"runner/brade":9,"runner/runner":19}],18:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, stdlib;
 
@@ -882,7 +759,7 @@ require("runner/symbol/mult");
 
 
 
-},{"runner/identifier":13,"runner/identifier/isnil":14,"runner/identifier/nil":15,"runner/identifier/pred":16,"runner/identifier/succ":17,"runner/symbol/mult":23,"runner/symbol/plus":24,"visitor/stdlib":29}],21:[function(require,module,exports){
+},{"runner/identifier":11,"runner/identifier/isnil":12,"runner/identifier/nil":13,"runner/identifier/pred":14,"runner/identifier/succ":15,"runner/symbol/mult":21,"runner/symbol/plus":22,"visitor/stdlib":25}],19:[function(require,module,exports){
 "use strict";
 var Runner,
   slice = [].slice;
@@ -907,7 +784,7 @@ Runner.create = function() {
 
 
 
-},{}],22:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 var FutureEval, NumberRunner, Runner, StringRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -951,7 +828,7 @@ module.exports = StringRunner = (function(superClass) {
 
 
 
-},{"future_eval":7,"runner/number":19,"runner/runner":21}],23:[function(require,module,exports){
+},{"future_eval":5,"runner/number":17,"runner/runner":19}],21:[function(require,module,exports){
 "use strict";
 var BradeRunner, IdentifierRunner, MultSymbolRunner, NumberRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -996,7 +873,7 @@ IdentifierRunner.register("*", MultSymbolRunner);
 
 
 
-},{"runner/brade":11,"runner/identifier":13,"runner/number":19}],24:[function(require,module,exports){
+},{"runner/brade":9,"runner/identifier":11,"runner/number":17}],22:[function(require,module,exports){
 "use strict";
 var BradeRunner, IdentifierRunner, NumberRunner, PlusSymbolRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -1041,7 +918,7 @@ IdentifierRunner.register("+", PlusSymbolRunner);
 
 
 
-},{"runner/brade":11,"runner/identifier":13,"runner/number":19}],25:[function(require,module,exports){
+},{"runner/brade":9,"runner/identifier":11,"runner/number":17}],23:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, STRING, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, stringToken, updateLocation, whitespaceToken;
 
@@ -1238,32 +1115,7 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":8}],26:[function(require,module,exports){
-"use strict";
-var examples;
-
-examples = require("examples");
-
-exports.createFragment = function(d, seed, key, click) {
-  var $div, $fragment, example, i, len;
-  $fragment = d.createDocumentFragment();
-  for (i = 0, len = examples.length; i < len; i++) {
-    example = examples[i];
-    $div = d.createElement("div");
-    $div.innerHTML = seed.split(key).join(example[1]);
-    $div.addEventListener("click", (function(code) {
-      return function() {
-        return click(code);
-      };
-    })(example[1]));
-    $fragment.appendChild($div);
-  }
-  return $fragment;
-};
-
-
-
-},{"examples":6}],27:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":6}],24:[function(require,module,exports){
 "use strict";
 var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, StringRunner, createInterpreter, envManager;
 
@@ -1330,61 +1182,7 @@ exports.create = createInterpreter = function(env) {
 
 
 
-},{"AST":2,"env_manager":5,"future_eval":7,"runner/definition":12,"runner/identifier":13,"runner/lambda_abstraction":18,"runner/number":19,"runner/string":22}],28:[function(require,module,exports){
-"use strict";
-var AST, JS_KEYWORDS, NUMBER, normalizeIdentifier;
-
-AST = require("AST");
-
-JS_KEYWORDS = require("constant").JS_KEYWORDS;
-
-NUMBER = "0123456789";
-
-normalizeIdentifier = function(s) {
-  if (JS_KEYWORDS[s] != null) {
-    return "$" + s;
-  }
-  if (NUMBER[s[0]] != null) {
-    return "$_" + s;
-  }
-  return s;
-};
-
-exports.create = function() {
-  var self, visit;
-  visit = {};
-  self = {
-    visit: visit
-  };
-  visit[AST.LIST] = function(node) {
-    return node.exprs.map(function(expr) {
-      return expr.accept(self);
-    }).join("\n");
-  };
-  visit[AST.APPLICATION] = function(node) {
-    return "(" + (node.left.accept(self)) + ")(" + (node.right.accept(self)) + ")";
-  };
-  visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    return "function(" + node.arg + ") { return " + (node.body.accept(self)) + "; }";
-  };
-  visit[AST.DEFINITION] = function(node) {
-    return "var " + (normalizeIdentifier(node.name)) + " = " + (node.body.accept(self)) + ";";
-  };
-  visit[AST.IDENTIFIER] = function(node) {
-    return normalizeIdentifier(node.name);
-  };
-  visit[AST.NUMBER.NATURAL] = function(node) {
-    return normalizeIdentifier("" + node.value);
-  };
-  visit[AST.STRING] = function(node) {
-    return node.value;
-  };
-  return self;
-};
-
-
-
-},{"AST":2,"constant":4}],29:[function(require,module,exports){
+},{"AST":2,"env_manager":4,"future_eval":5,"runner/definition":10,"runner/identifier":11,"runner/lambda_abstraction":16,"runner/number":17,"runner/string":20}],25:[function(require,module,exports){
 "use strict";
 var Interpreter, codes, envManager, parser, stdlib, tokenizer;
 
@@ -1398,13 +1196,13 @@ parser = require("parser");
 
 module.exports = stdlib = Interpreter.create(envManager.getGlobal());
 
-codes = ["succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "+      := \\m n f x.m f (n f x)", "*      := \\m n f.m (n f)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q.p q false", "or     := \\p q.p true q", "not    := \\p x y.p y x", "if     := \\p x y.p x y", "isZero := \\n.n (\\x.false) true", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "cons   := pair", "head   := first", "tail   := second", "list   := Y (\\f A m.isnil m (A m) (f (\\x.A (cons m x)))) (\\u.u)", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "K      := \\x y.x", "S      := \\x y z.x z (y z)", "I      := \\x.x", "X      := \\x.x S K", "fact   := Y (\\f r n.isZero n r (f (* r n) (pred n))) 1"];
+codes = ["succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "+      := \\m n f x.m f (n f x)", "*      := \\m n f.m (n f)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q.p q false", "or     := \\p q.p true q", "not    := \\p x y.p y x", "if     := \\p x y.p x y", "isZero := \\n.n (\\x.false) true", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "cons   := pair", "head   := first", "tail   := second", "list   := Y (\\f A m.isnil m (A m) (f (\\x.A (cons m x)))) (\\u.u)", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "K      := \\x y.x", "S      := \\x y z.x z (y z)", "I      := \\x.x", "X      := \\x.x S K"];
 
 parser.parse(tokenizer.tokenize(codes.join("\n"))).accept(stdlib);
 
 
 
-},{"env_manager":5,"parser":9,"tokenizer":25,"visitor/interpreter":27}],30:[function(require,module,exports){
+},{"env_manager":4,"parser":7,"tokenizer":23,"visitor/interpreter":24}],26:[function(require,module,exports){
 "use strict";
 var AST;
 
@@ -1438,76 +1236,6 @@ exports.create = function() {
   };
   visit[AST.STRING] = function(node) {
     return node.value;
-  };
-  return self;
-};
-
-
-
-},{"AST":2}],31:[function(require,module,exports){
-"use strict";
-var AST;
-
-AST = require("AST");
-
-exports.create = function(reporter, tab) {
-  var depth, indent, puts, self, visit;
-  if (tab == null) {
-    tab = "  ";
-  }
-  depth = "";
-  indent = function(f) {
-    var original;
-    original = depth;
-    depth += tab;
-    f();
-    return depth = original;
-  };
-  puts = function(s) {
-    return reporter.report("" + depth + s);
-  };
-  visit = {};
-  self = {
-    visit: visit
-  };
-  visit[AST.LIST] = function(node) {
-    var expr, i, len, ref;
-    ref = node.exprs;
-    for (i = 0, len = ref.length; i < len; i++) {
-      expr = ref[i];
-      expr.accept(self);
-    }
-  };
-  visit[AST.APPLICATION] = function(node) {};
-  visit[AST.APPLICATION] = function(node) {
-    puts(AST.APPLICATION);
-    return indent(function() {
-      node.left.accept(self);
-      return node.right.accept(self);
-    });
-  };
-  visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    puts(AST.LAMBDA_ABSTRACTION);
-    return indent(function() {
-      puts(node.arg);
-      return node.body.accept(self);
-    });
-  };
-  visit[AST.DEFINITION] = function(node) {
-    puts(AST.DEFINITION);
-    return indent(function() {
-      puts(node.name);
-      return node.body.accept(self);
-    });
-  };
-  visit[AST.IDENTIFIER] = function(node) {
-    return puts(node.name);
-  };
-  visit[AST.NUMBER.NATURAL] = function(node) {
-    return puts(node.value);
-  };
-  visit[AST.STRING] = function(node) {
-    return puts(node.value);
   };
   return self;
 };
