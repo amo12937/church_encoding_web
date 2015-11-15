@@ -84,7 +84,7 @@ window.addEventListener("load", function() {
 
 
 
-},{"parser":7,"runner/reserved":18,"tokenizer":23,"visitor/interpreter":24}],2:[function(require,module,exports){
+},{"parser":7,"runner/reserved":19,"tokenizer":24,"visitor/interpreter":25}],2:[function(require,module,exports){
 "use strict";
 var prefixedKV;
 
@@ -352,8 +352,7 @@ parseConstant = function(lexer) {
 };
 
 acceptor = function(visitor) {
-  var base, name1;
-  return typeof (base = visitor.visit)[name1 = this.tag] === "function" ? base[name1](this) : void 0;
+  return visitor.visit(this);
 };
 
 exports.listNode = listNode = function(exprs) {
@@ -463,42 +462,78 @@ module.exports = BradeRunner = (function(superClass) {
 
 
 
-},{"runner/runner":19}],10:[function(require,module,exports){
+},{"runner/runner":20}],10:[function(require,module,exports){
 "use strict";
-var DefinitionRunner, Runner,
+var DefinitionRunner, Runner, runnerFactory,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
+
+runnerFactory = require("runner/factory");
 
 Runner = require("runner/runner");
 
 module.exports = DefinitionRunner = (function(superClass) {
   extend(DefinitionRunner, superClass);
 
-  function DefinitionRunner(interpreter, name, body) {
-    this.name = name;
-    this.body = body;
+  function DefinitionRunner(interpreter, name1, body1) {
+    this.name = name1;
+    this.body = body1;
     DefinitionRunner.__super__.constructor.call(this, interpreter);
   }
 
   DefinitionRunner.prototype.toString = function() {
-    return this.name + ": OK";
+    return "OK: " + this.name;
   };
 
   return DefinitionRunner;
 
 })(Runner);
 
+runnerFactory.register("DEFINITION", function(interpreter, name, body) {
+  return DefinitionRunner.create(interpreter, name, body);
+});
 
 
-},{"runner/runner":19}],11:[function(require,module,exports){
+
+},{"runner/factory":11,"runner/runner":20}],11:[function(require,module,exports){
 "use strict";
-var IdentifierRunner, Runner, runners, stdlib,
+var RunnerFactory, runnerFactory,
+  slice = [].slice;
+
+RunnerFactory = (function() {
+  function RunnerFactory() {
+    this.runners = {};
+  }
+
+  RunnerFactory.prototype.create = function() {
+    var args, name;
+    name = arguments[0], args = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+    return this.runners[name].apply(this, args);
+  };
+
+  RunnerFactory.prototype.register = function(name, func) {
+    return this.runners[name] = func;
+  };
+
+  return RunnerFactory;
+
+})();
+
+module.exports = runnerFactory = new RunnerFactory;
+
+
+
+},{}],12:[function(require,module,exports){
+"use strict";
+var IdentifierRunner, Runner, runnerFactory, runners, stdlib,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-Runner = require("runner/runner");
+runnerFactory = require("runner/factory");
 
-stdlib = null;
+stdlib = require("visitor/stdlib");
+
+Runner = require("runner/runner");
 
 runners = {};
 
@@ -511,11 +546,8 @@ module.exports = IdentifierRunner = (function(superClass) {
   }
 
   IdentifierRunner.prototype.run = function(thunk) {
-    var r, ref;
-    if ((runners[this.name] != null) && (r = runners[this.name].run(thunk))) {
-      return r;
-    }
-    return ((ref = stdlib.env[this.name]) != null ? ref.get().run(thunk) : void 0) || thunk.get();
+    var ref, ref1;
+    return ((ref = runners[this.name]) != null ? ref.run(thunk) : void 0) || ((ref1 = stdlib.env[this.name]) != null ? ref1.get().run(thunk) : void 0) || thunk.get();
   };
 
   IdentifierRunner.prototype.toString = function() {
@@ -526,13 +558,9 @@ module.exports = IdentifierRunner = (function(superClass) {
 
 })(Runner);
 
-IdentifierRunner.create = function(interpreter, name) {
-  return runners[name] || Runner.create.call(this, interpreter, name);
-};
-
-IdentifierRunner.setStdlib = function(s) {
-  return stdlib = s;
-};
+runnerFactory.register("IDENTIFIER", function(interpreter, name) {
+  return runners[name] || IdentifierRunner.create(interpreter, name);
+});
 
 IdentifierRunner.register = function(name, runnerProvider) {
   return runners[name] = runnerProvider.create(stdlib, name);
@@ -540,7 +568,7 @@ IdentifierRunner.register = function(name, runnerProvider) {
 
 
 
-},{"runner/runner":19}],12:[function(require,module,exports){
+},{"runner/factory":11,"runner/runner":20,"visitor/stdlib":26}],13:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, IsnilIdentifierRunner, NilIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -574,7 +602,7 @@ IdentifierRunner.register("isnil", IsnilIdentifierRunner);
 
 
 
-},{"runner/identifier":11,"runner/identifier/nil":13}],13:[function(require,module,exports){
+},{"runner/identifier":12,"runner/identifier/nil":14}],14:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, NilIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -601,7 +629,7 @@ IdentifierRunner.register("nil", NilIdentifierRunner);
 
 
 
-},{"runner/identifier":11}],14:[function(require,module,exports){
+},{"runner/identifier":12}],15:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, NumberRunner, PredIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -635,7 +663,7 @@ IdentifierRunner.register("pred", PredIdentifierRunner);
 
 
 
-},{"runner/identifier":11,"runner/number":17}],15:[function(require,module,exports){
+},{"runner/identifier":12,"runner/number":18}],16:[function(require,module,exports){
 "use strict";
 var IdentifierRunner, NumberRunner, SuccIdentifierRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -669,29 +697,24 @@ IdentifierRunner.register("succ", SuccIdentifierRunner);
 
 
 
-},{"runner/identifier":11,"runner/number":17}],16:[function(require,module,exports){
+},{"runner/identifier":12,"runner/number":18}],17:[function(require,module,exports){
 "use strict";
-var AST, LambdaAbstractionRunner, Runner, parser, toStringVisitor, tokenizer,
+var LambdaAbstractionRunner, Runner, runnerFactory, toStringVisitor,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
+
+runnerFactory = require("runner/factory");
 
 Runner = require("runner/runner");
 
 toStringVisitor = require("visitor/to_string_visitor").create();
 
-tokenizer = require("tokenizer");
-
-parser = require("parser");
-
-AST = require("AST");
-
 module.exports = LambdaAbstractionRunner = (function(superClass) {
   extend(LambdaAbstractionRunner, superClass);
 
-  function LambdaAbstractionRunner(interpreter, arg, body, name1) {
-    this.arg = arg;
-    this.body = body;
-    this.name = name1;
+  function LambdaAbstractionRunner(interpreter, arg1, body1) {
+    this.arg = arg1;
+    this.body = body1;
     LambdaAbstractionRunner.__super__.constructor.call(this, interpreter);
   }
 
@@ -703,33 +726,26 @@ module.exports = LambdaAbstractionRunner = (function(superClass) {
   };
 
   LambdaAbstractionRunner.prototype.toString = function() {
-    return this.name || ("\\" + this.arg + "." + (this.body.accept(toStringVisitor)));
+    return "\\" + this.arg + "." + (this.body.accept(toStringVisitor));
   };
 
   return LambdaAbstractionRunner;
 
 })(Runner);
 
-LambdaAbstractionRunner.runnerWithCode = function(code) {
-  var ast;
-  ast = parser.parse(tokenizer.tokenize(code)).exprs[0];
-  if (ast.tag !== AST.LAMBDA_ABSTRACTION) {
-    return Runner.create;
-  }
-  return {
-    createMyself: function(interpreter, name) {
-      return LambdaAbstractionRunner.create(interpreter, ast.arg, ast.body, name);
-    }
-  };
-};
+runnerFactory.register("LAMBDA_ABSTRACTION", function(interpreter, arg, body) {
+  return LambdaAbstractionRunner.create(interpreter, arg, body);
+});
 
 
 
-},{"AST":2,"parser":7,"runner/runner":19,"tokenizer":23,"visitor/to_string_visitor":26}],17:[function(require,module,exports){
+},{"runner/factory":11,"runner/runner":20,"visitor/to_string_visitor":27}],18:[function(require,module,exports){
 "use strict";
-var BradeRunner, FutureEval, NumberRunner, Runner,
+var BradeRunner, FutureEval, NumberRunner, Runner, runnerFactory,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
+
+runnerFactory = require("runner/factory");
 
 Runner = require("runner/runner");
 
@@ -740,8 +756,8 @@ FutureEval = require("future_eval");
 module.exports = NumberRunner = (function(superClass) {
   extend(NumberRunner, superClass);
 
-  function NumberRunner(interpreter, value) {
-    this.value = value;
+  function NumberRunner(interpreter, value1) {
+    this.value = value1;
     NumberRunner.__super__.constructor.call(this, interpreter);
   }
 
@@ -778,17 +794,23 @@ module.exports = NumberRunner = (function(superClass) {
 
 })(Runner);
 
+runnerFactory.register("NUMBER", function(interpreter, value) {
+  return NumberRunner.create(interpreter, value);
+});
 
 
-},{"future_eval":5,"runner/brade":9,"runner/runner":19}],18:[function(require,module,exports){
+
+},{"future_eval":5,"runner/brade":9,"runner/factory":11,"runner/runner":20}],19:[function(require,module,exports){
 "use strict";
-var IdentifierRunner, stdlib;
+require("runner/lambda_abstraction");
 
-stdlib = require("visitor/stdlib");
+require("runner/definition");
 
-IdentifierRunner = require("runner/identifier");
+require("runner/identifier");
 
-IdentifierRunner.setStdlib(stdlib);
+require("runner/number");
+
+require("runner/string");
 
 require("runner/identifier/succ");
 
@@ -804,7 +826,7 @@ require("runner/symbol/mult");
 
 
 
-},{"runner/identifier":11,"runner/identifier/isnil":12,"runner/identifier/nil":13,"runner/identifier/pred":14,"runner/identifier/succ":15,"runner/symbol/mult":21,"runner/symbol/plus":22,"visitor/stdlib":25}],19:[function(require,module,exports){
+},{"runner/definition":10,"runner/identifier":12,"runner/identifier/isnil":13,"runner/identifier/nil":14,"runner/identifier/pred":15,"runner/identifier/succ":16,"runner/lambda_abstraction":17,"runner/number":18,"runner/string":21,"runner/symbol/mult":22,"runner/symbol/plus":23}],20:[function(require,module,exports){
 "use strict";
 var Runner,
   slice = [].slice;
@@ -829,11 +851,13 @@ Runner.create = function() {
 
 
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 "use strict";
-var FutureEval, NumberRunner, Runner, StringRunner,
+var FutureEval, NumberRunner, Runner, StringRunner, runnerFactory,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
+
+runnerFactory = require("runner/factory");
 
 Runner = require("runner/runner");
 
@@ -844,8 +868,8 @@ FutureEval = require("future_eval");
 module.exports = StringRunner = (function(superClass) {
   extend(StringRunner, superClass);
 
-  function StringRunner(interpreter, text) {
-    this.text = text;
+  function StringRunner(interpreter, text1) {
+    this.text = text1;
     StringRunner.__super__.constructor.call(this, interpreter);
   }
 
@@ -871,9 +895,13 @@ module.exports = StringRunner = (function(superClass) {
 
 })(Runner);
 
+runnerFactory.register("STRING", function(interpreter, text) {
+  return StringRunner.create(interpreter, text);
+});
 
 
-},{"future_eval":5,"runner/number":17,"runner/runner":19}],21:[function(require,module,exports){
+
+},{"future_eval":5,"runner/factory":11,"runner/number":18,"runner/runner":20}],22:[function(require,module,exports){
 "use strict";
 var BradeRunner, IdentifierRunner, MultSymbolRunner, NumberRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -918,7 +946,7 @@ IdentifierRunner.register("*", MultSymbolRunner);
 
 
 
-},{"runner/brade":9,"runner/identifier":11,"runner/number":17}],22:[function(require,module,exports){
+},{"runner/brade":9,"runner/identifier":12,"runner/number":18}],23:[function(require,module,exports){
 "use strict";
 var BradeRunner, IdentifierRunner, NumberRunner, PlusSymbolRunner,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -963,7 +991,7 @@ IdentifierRunner.register("+", PlusSymbolRunner);
 
 
 
-},{"runner/brade":9,"runner/identifier":11,"runner/number":17}],23:[function(require,module,exports){
+},{"runner/brade":9,"runner/identifier":12,"runner/number":18}],24:[function(require,module,exports){
 "use strict";
 var COMMENT_LONG, COMMENT_ONELINE, ERROR, IDENTIFIER, LITERAL_CHAR, LITERAL_CHAR2, LITERAL_CLOSER, LITERAL_OPENER, MULTI_DENT, NATURAL_NUMBER, STRING, TOKEN, WHITESPACE, cleanCode, commentToken, errorToken, identifierToken, lineToken, literalToken, mementoContainer, naturalNumberToken, stringToken, updateLocation, whitespaceToken;
 
@@ -1160,9 +1188,11 @@ updateLocation = function(l, c, chunk, offset) {
 
 
 
-},{"TOKEN":3,"memento_container":6}],24:[function(require,module,exports){
+},{"TOKEN":3,"memento_container":6}],25:[function(require,module,exports){
 "use strict";
-var AST, CREATE_CHILD_KEY, DefinitionRunner, EnvManager, FutureEval, IdentifierRunner, LambdaAbstractionRunner, NumberRunner, StringRunner, createInterpreter, envManager;
+var AST, CREATE_CHILD_KEY, EnvManager, FutureEval, Interpreter, Visitor, envManager, runnerFactory,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
 
 AST = require("AST");
 
@@ -1174,115 +1204,203 @@ CREATE_CHILD_KEY = EnvManager.CREATE_CHILD_KEY;
 
 envManager = EnvManager.create();
 
-LambdaAbstractionRunner = require("runner/lambda_abstraction");
+Visitor = require("visitor/visitor");
 
-DefinitionRunner = require("runner/definition");
+runnerFactory = require("runner/factory");
 
-IdentifierRunner = require("runner/identifier");
+module.exports = Interpreter = (function(superClass) {
+  extend(Interpreter, superClass);
 
-NumberRunner = require("runner/number");
+  function Interpreter(env1) {
+    this.env = env1 != null ? env1 : envManager.getGlobal();
+    void 0;
+  }
 
-StringRunner = require("runner/string");
+  Interpreter.prototype.createChild = function() {
+    return new Interpreter(this.env[CREATE_CHILD_KEY]());
+  };
 
-exports.create = createInterpreter = function(env) {
-  var self, visit;
+  return Interpreter;
+
+})(Visitor);
+
+Interpreter.create = function(env) {
   if (env == null) {
     env = envManager.getGlobal();
   }
-  visit = {};
-  self = {
-    env: env,
-    visit: visit,
-    createChild: function() {
-      return createInterpreter(env[CREATE_CHILD_KEY]());
-    }
-  };
-  visit[AST.LIST] = function(node) {
-    return node.exprs.map(function(expr) {
-      return "" + (expr.accept(self));
-    }).join("\n");
-  };
-  visit[AST.APPLICATION] = function(node) {
-    return node.left.accept(self).run(FutureEval.create(node.right, self));
-  };
-  visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    return LambdaAbstractionRunner.create(self, node.arg, node.body);
-  };
-  visit[AST.DEFINITION] = function(node) {
-    env[node.name] = FutureEval.create(node.body, self);
-    return DefinitionRunner.create(self, node.name, node.body);
-  };
-  visit[AST.IDENTIFIER] = function(node) {
-    var ref;
-    return ((ref = env[node.name]) != null ? ref.get() : void 0) || IdentifierRunner.create(self, node.name);
-  };
-  visit[AST.NUMBER.NATURAL] = function(node) {
-    return NumberRunner.create(self, node.value);
-  };
-  visit[AST.STRING] = function(node) {
-    return StringRunner.create(self, node.text);
-  };
-  return self;
+  return Visitor.create.call(this, env);
 };
 
+Interpreter.registerVisit(AST.LIST, function(node) {
+  var self;
+  self = this;
+  return node.exprs.map(function(expr) {
+    return "" + (expr.accept(self));
+  }).join("\n");
+});
+
+Interpreter.registerVisit(AST.APPLICATION, function(node) {
+  return node.left.accept(this).run(FutureEval.create(node.right, this));
+});
+
+Interpreter.registerVisit(AST.LAMBDA_ABSTRACTION, function(node) {
+  return runnerFactory.create("LAMBDA_ABSTRACTION", this, node.arg, node.body);
+});
+
+Interpreter.registerVisit(AST.DEFINITION, function(node) {
+  this.env[node.name] = FutureEval.create(node.body, this);
+  return runnerFactory.create("DEFINITION", this, node.name, node.body);
+});
+
+Interpreter.registerVisit(AST.IDENTIFIER, function(node) {
+  var ref;
+  return ((ref = this.env[node.name]) != null ? ref.get() : void 0) || runnerFactory.create("IDENTIFIER", this, node.name);
+});
+
+Interpreter.registerVisit(AST.NUMBER.NATURAL, function(node) {
+  return runnerFactory.create("NUMBER", this, node.value);
+});
+
+Interpreter.registerVisit(AST.STRING, function(node) {
+  return runnerFactory.create("STRING", this, node.text);
+});
 
 
-},{"AST":2,"env_manager":4,"future_eval":5,"runner/definition":10,"runner/identifier":11,"runner/lambda_abstraction":16,"runner/number":17,"runner/string":20}],25:[function(require,module,exports){
+
+},{"AST":2,"env_manager":4,"future_eval":5,"runner/factory":11,"visitor/visitor":28}],26:[function(require,module,exports){
 "use strict";
-var Interpreter, codes, envManager, parser, stdlib, tokenizer;
+var AST, CREATE_CHILD_KEY, EnvManager, Interpreter, Stdlib, codes, envManager, global, parser, runnerFactory, stdlib, stdlibEnv, tokenizer,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+AST = require("AST");
 
 Interpreter = require("visitor/interpreter");
 
-envManager = require("env_manager").create();
+EnvManager = require("env_manager");
+
+CREATE_CHILD_KEY = EnvManager.CREATE_CHILD_KEY;
+
+envManager = EnvManager.create();
+
+global = envManager.getGlobal();
+
+stdlibEnv = global[CREATE_CHILD_KEY]();
+
+stdlibEnv[CREATE_CHILD_KEY] = function() {
+  return global[CREATE_CHILD_KEY]();
+};
+
+runnerFactory = require("runner/factory");
+
+Stdlib = (function(superClass) {
+  extend(Stdlib, superClass);
+
+  function Stdlib() {
+    return Stdlib.__super__.constructor.apply(this, arguments);
+  }
+
+  return Stdlib;
+
+})(Interpreter);
+
+Stdlib.registerVisit(AST.IDENTIFIER, function(node) {
+  return runnerFactory.create("IDENTIFIER", this, node.name);
+});
+
+module.exports = stdlib = Stdlib.create(stdlibEnv);
 
 tokenizer = require("tokenizer");
 
 parser = require("parser");
 
-module.exports = stdlib = Interpreter.create(envManager.getGlobal());
-
-codes = ["succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "+      := \\m n f x.m f (n f x)", "*      := \\m n f.m (n f)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q.p q false", "or     := \\p q.p true q", "not    := \\p x y.p y x", "if     := \\p x y.p x y", "isZero := \\n.n (\\x.false) true", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "cons   := pair", "head   := first", "tail   := second", "list   := Y (\\f A m.isnil m (A m) (f (\\x.A (cons m x)))) (\\u.u)", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "K      := \\x y.x", "S      := \\x y z.x z (y z)", "I      := \\x.x", "X      := \\x.x S K"];
+codes = ["succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "+      := \\m n f x.m f (n f x)", "*      := \\m n f.m (n f)", "sub    := \\m n.n pred m", "div    := \\n.Y (\\f q m n.(s := sub m n) isZero s q (f (succ q) s n)) 0 (succ n)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q.p q false", "or     := \\p q.p true q", "not    := \\p x y.p y x", "if     := \\p x y.p x y", "isZero := \\n.n (\\x.false) true", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "cons   := pair", "head   := first", "tail   := second", "list   := Y (\\f A m.isnil m (A m) (f (\\x.A (cons m x)))) (\\u.u)", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "K      := \\x y.x", "S      := \\x y z.x z (y z)", "I      := \\x.x", "X      := \\x.x S K", "fact   := Y (\\f r n.isZero n r (f (* r n) (pred n))) 1"];
 
 parser.parse(tokenizer.tokenize(codes.join("\n"))).accept(stdlib);
 
 
 
-},{"env_manager":4,"parser":7,"tokenizer":23,"visitor/interpreter":24}],26:[function(require,module,exports){
+},{"AST":2,"env_manager":4,"parser":7,"runner/factory":11,"tokenizer":24,"visitor/interpreter":25}],27:[function(require,module,exports){
 "use strict";
-var AST;
+var AST, ToStringVisitor, Visitor,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
 
 AST = require("AST");
 
-exports.create = function() {
-  var self, visit;
-  visit = {};
-  self = {
-    visit: visit
+Visitor = require("visitor/visitor");
+
+module.exports = ToStringVisitor = (function(superClass) {
+  extend(ToStringVisitor, superClass);
+
+  function ToStringVisitor() {
+    return ToStringVisitor.__super__.constructor.apply(this, arguments);
+  }
+
+  return ToStringVisitor;
+
+})(Visitor);
+
+ToStringVisitor.registerVisit(AST.LIST, function(node) {
+  var self;
+  self = this;
+  return node.exprs.map(function(expr) {
+    return expr.accept(self);
+  }).join("\n");
+});
+
+ToStringVisitor.registerVisit(AST.APPLICATION, function(node) {
+  return "(" + (node.left.accept(this)) + " " + (node.right.accept(this)) + ")";
+});
+
+ToStringVisitor.registerVisit(AST.LAMBDA_ABSTRACTION, function(node) {
+  return "(\\" + node.arg + "." + (node.body.accept(this)) + ")";
+});
+
+ToStringVisitor.registerVisit(AST.DEFINITION, function(node) {
+  return "(" + node.name + " := " + (node.body.accept(this)) + ")";
+});
+
+ToStringVisitor.registerVisit(AST.IDENTIFIER, function(node) {
+  return node.name;
+});
+
+ToStringVisitor.registerVisit(AST.NUMBER.NATURAL, function(node) {
+  return node.value;
+});
+
+ToStringVisitor.registerVisit(AST.STRING, function(node) {
+  return node.value;
+});
+
+
+
+},{"AST":2,"visitor/visitor":28}],28:[function(require,module,exports){
+"use strict";
+var AST, Visitor,
+  slice = [].slice;
+
+AST = require("AST");
+
+module.exports = Visitor = (function() {
+  function Visitor() {
+    void 0;
+  }
+
+  Visitor.prototype.visit = function(node) {
+    return this["visit_" + node.tag](node);
   };
-  visit[AST.LIST] = function(node) {
-    return node.exprs.map(function(expr) {
-      return expr.accept(self);
-    }).join("\n");
-  };
-  visit[AST.APPLICATION] = function(node) {
-    return "(" + (node.left.accept(self)) + " " + (node.right.accept(self)) + ")";
-  };
-  visit[AST.LAMBDA_ABSTRACTION] = function(node) {
-    return "(\\" + node.arg + "." + (node.body.accept(self)) + ")";
-  };
-  visit[AST.DEFINITION] = function(node) {
-    return "(" + node.name + " := " + (node.body.accept(self)) + ")";
-  };
-  visit[AST.IDENTIFIER] = function(node) {
-    return node.name;
-  };
-  visit[AST.NUMBER.NATURAL] = function(node) {
-    return node.value;
-  };
-  visit[AST.STRING] = function(node) {
-    return node.value;
-  };
-  return self;
+
+  return Visitor;
+
+})();
+
+Visitor.registerVisit = function(tag, func) {
+  return this.prototype["visit_" + tag] = func;
+};
+
+Visitor.create = function() {
+  return new (Function.prototype.bind.apply(this, [this].concat(slice.call(arguments))));
 };
 
 
