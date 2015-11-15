@@ -622,7 +622,7 @@ module.exports = PredIdentifierRunner = (function(superClass) {
     var n, ref;
     n = nThunk.get();
     if (n instanceof NumberRunner) {
-      return NumberRunner.create(this.interpreter, n.value - 1);
+      return NumberRunner.create(this.interpreter, Math.max(0, n.value - 1));
     }
     return (ref = this.interpreter.env[this.name]) != null ? ref.get().run(nThunk) : void 0;
   };
