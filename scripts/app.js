@@ -32,6 +32,11 @@ createP = function(d, cls, text) {
 
 Reporter = function(d, $result) {
   return {
+    error: {
+      report: function(errors) {
+        return $result.appendChild(createFragment(d, "ce-out-error", errors));
+      }
+    },
     code: {
       report: function(code) {
         return $result.appendChild(createFragment(d, "ce-out-code", code.split("\n")));
@@ -54,31 +59,55 @@ window.addEventListener("load", function() {
   reporter = Reporter(document, $result);
   i = 0;
   compile = function(code) {
-    var lexer, result;
+    var e, error1, errors, lexer, pResult;
+    i += 1;
     reporter.code.report(code);
     console.log("[" + i + "] code =");
     console.log(code);
+    errors = [];
     console.time("[" + i + "] tokenizer");
-    lexer = tokenizer.tokenize(code);
+    lexer = tokenizer.tokenize(code, errors);
     console.timeEnd("[" + i + "] tokenizer");
+    if (errors.length > 0) {
+      reporter.error.report(errors.map(function(error) {
+        return error.tag + "[" + error.line + " : " + error.column + "]: " + error.value;
+      }));
+      return;
+    }
+    errors = [];
     console.time("[" + i + "] parser");
-    result = parser.parse(lexer);
+    pResult = parser.parse(lexer, errors);
     console.timeEnd("[" + i + "] parser");
+    if (errors.length > 0) {
+      reporter.error.report(errors.map(function(error) {
+        return error.name + "[" + error.token.line + " : " + error.token.column + "]: " + error.token.value + " (tokenTag = " + error.token.tag + ")";
+      }));
+      return;
+    }
     console.time("[" + i + "] interpreter");
-    reporter.result.report(result.accept(interpreter));
-    console.timeEnd("[" + i + "] interpreter");
-    return i += 1;
+    try {
+      reporter.result.report(pResult.accept(interpreter));
+    } catch (error1) {
+      e = error1;
+      reporter.error.report(["RUNTIME_ERROR: " + e.message]);
+    }
+    return console.timeEnd("[" + i + "] interpreter");
   };
   return $input.addEventListener("keypress", function(e) {
+    var s;
     if (e.keyCode !== 13) {
       return;
     }
     if (e.shiftKey) {
       return;
     }
-    compile($input.value);
-    $input.value = "";
-    return e.preventDefault();
+    e.preventDefault();
+    s = $input.value.trim();
+    if (s === "") {
+      return;
+    }
+    compile(s);
+    return $input.value = "";
   });
 });
 
@@ -99,7 +128,22 @@ module.exports = prefixedKV("AST", {
   NUMBER: {
     "NATURAL": "NATURAL"
   },
-  "STRING": "STRING"
+  "STRING": "STRING",
+  ERROR: {
+    EXPECT: {
+      BRACKETS: {
+        "TO_HAVE_CLOSER": "TO_HAVE_CLOSER",
+        "TO_HAVE_BODY": "TO_HAVE_BODY"
+      },
+      LAMBDA: {
+        "TO_HAVE_AN_ARGUMENT": "TO_HAVE_AN_ARGUMENT",
+        "TO_HAVE_BODY": "TO_HAVE_BODY"
+      },
+      DEFINITION: {
+        "TO_HAVE_BODY": "TO_HAVE_BODY"
+      }
+    }
+  }
 });
 
 
@@ -212,24 +256,31 @@ module.exports = {
 
 },{}],7:[function(require,module,exports){
 "use strict";
-var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, naturalNumberNode, parseApplication, parseApplicationWithBrackets, parseConstant, parseDefinition, parseExpr, parseLambdaAbstraction, parseMultiline, stringNode,
+var AST, TOKEN, acceptor, applicationNode, definitionNode, identifierNode, lambdaAbstractionNode, listNode, makeError, naturalNumberNode, parseApplication, parseApplicationWithBrackets, parseConstant, parseDefinition, parseExpr, parseLambdaAbstraction, parseMultiline, stringNode,
   slice = [].slice;
 
 TOKEN = require("TOKEN");
 
 AST = require("AST");
 
-exports.parse = function(lexer) {
-  return parseMultiline(lexer);
+exports.parse = function(lexer, errors) {
+  return parseMultiline(lexer, errors);
 };
 
-parseMultiline = function(lexer) {
+makeError = function(name, token) {
+  return {
+    name: name,
+    token: token
+  };
+};
+
+parseMultiline = function(lexer, errors) {
   var app, apps, rewind, rewindInner, token;
   rewind = lexer.memento();
   rewindInner = lexer.memento();
   apps = [];
   while (true) {
-    if (app = parseApplication(lexer)) {
+    if (app = parseApplication(lexer, errors)) {
       apps.push(app);
     }
     rewindInner = lexer.memento;
@@ -243,14 +294,14 @@ parseMultiline = function(lexer) {
   return listNode(apps);
 };
 
-parseApplication = function(lexer) {
+parseApplication = function(lexer, errors) {
   var app, expr, exprs, i, len, others, rewind, rewindInner;
   rewind = lexer.memento();
   rewindInner = lexer.memento();
   exprs = [];
   while (true) {
     rewindInner = lexer.memento();
-    if (!(expr = parseExpr(lexer))) {
+    if (!(expr = parseExpr(lexer, errors))) {
       break;
     }
     exprs.push(expr);
@@ -267,29 +318,31 @@ parseApplication = function(lexer) {
   return app;
 };
 
-parseExpr = function(lexer) {
-  return parseApplicationWithBrackets(lexer) || parseLambdaAbstraction(lexer) || parseDefinition(lexer) || parseConstant(lexer);
+parseExpr = function(lexer, errors) {
+  return parseApplicationWithBrackets(lexer, errors) || parseLambdaAbstraction(lexer, errors) || parseDefinition(lexer, errors) || parseConstant(lexer, errors);
 };
 
-parseApplicationWithBrackets = function(lexer) {
-  var app, rewind, token;
+parseApplicationWithBrackets = function(lexer, errors) {
+  var app, cToken, oToken, rewind;
   rewind = lexer.memento();
-  token = lexer.next();
-  if (token.tag !== TOKEN.BRACKETS_OPEN) {
+  oToken = lexer.next();
+  if (oToken.tag !== TOKEN.BRACKETS_OPEN) {
     return rewind();
   }
-  app = parseApplication(lexer);
+  app = parseApplication(lexer, errors);
   if (app == null) {
+    errors.push(makeError(AST.ERROR.EXPECT.BRACKETS.TO_HAVE_BODY, oToken));
     return rewind();
   }
-  token = lexer.next();
-  if (token.tag !== TOKEN.BRACKETS_CLOSE) {
-    return rewind();
+  cToken = lexer.next();
+  if (cToken.tag === TOKEN.BRACKETS_CLOSE) {
+    return app;
   }
-  return app;
+  errors.push(makeError(AST.ERROR.EXPECT.BRACKETS.TO_HAVE_CLOSER, oToken));
+  return rewind();
 };
 
-parseLambdaAbstraction = function(lexer) {
+parseLambdaAbstraction = function(lexer, errors) {
   var argToken, argTokens, body, i, lmda, rewind, token;
   rewind = lexer.memento();
   token = lexer.next();
@@ -302,11 +355,17 @@ parseLambdaAbstraction = function(lexer) {
     argTokens.push(token);
     token = lexer.next();
   }
-  if (argTokens.length === 0 || token.tag !== TOKEN.LAMBDA_BODY) {
+  if (argTokens.length === 0) {
+    errors.push(makeError(AST.ERROR.EXPECT.LAMBDA.TO_HAVE_AN_ARGUMENT, token));
     return rewind();
   }
-  body = parseApplication(lexer);
+  if (token.tag !== TOKEN.LAMBDA_BODY) {
+    errors.push(makeError(AST.ERROR.EXPECT.LAMBDA.TO_HAVE_BODY, token));
+    return rewind();
+  }
+  body = parseApplication(lexer, errors);
   if (body == null) {
+    errors.push(makeError(AST.ERROR.EXPECT.LAMBDA.TO_HAVE_BODY, lexer.next()));
     return rewind();
   }
   lmda = body;
@@ -317,7 +376,7 @@ parseLambdaAbstraction = function(lexer) {
   return lmda;
 };
 
-parseDefinition = function(lexer) {
+parseDefinition = function(lexer, errors) {
   var body, idToken, rewind, token;
   rewind = lexer.memento();
   idToken = lexer.next();
@@ -328,14 +387,15 @@ parseDefinition = function(lexer) {
   if (token.tag !== TOKEN.DEF_OP) {
     return rewind();
   }
-  body = parseApplication(lexer);
+  body = parseApplication(lexer, errors);
   if (body != null) {
     return definitionNode(idToken.value, body);
   }
+  errors.push(makeError(AST.ERROR.EXPECT.DEFINITION.TO_HAVE_BODY, token));
   return rewind();
 };
 
-parseConstant = function(lexer) {
+parseConstant = function(lexer, errors) {
   var rewind, token;
   rewind = lexer.memento();
   token = lexer.next();
@@ -999,17 +1059,14 @@ TOKEN = require("TOKEN");
 
 mementoContainer = require("memento_container");
 
-exports.tokenize = function(code) {
-  var addToken, brackets, column, consumed, context, i, latestBracket, line, popBracket, pushBracket, ref, tokens;
+exports.tokenize = function(code, errors) {
+  var addError, addToken, brackets, column, consumed, context, i, latestBracket, line, makeToken, popBracket, pushBracket, ref, tokens;
   code = cleanCode(code);
   tokens = [];
   line = 0;
   column = 0;
   brackets = [];
-  addToken = function(tag, value, length, token) {
-    if (length == null) {
-      length = value.length;
-    }
+  makeToken = function(tag, value, token) {
     if (token == null) {
       token = {};
     }
@@ -1017,7 +1074,26 @@ exports.tokenize = function(code) {
     token.value = value;
     token.line = line;
     token.column = column;
-    tokens.push(token);
+    return token;
+  };
+  addToken = function(tag, value, length, token) {
+    if (length == null) {
+      length = value.length;
+    }
+    if (token == null) {
+      token = {};
+    }
+    tokens.push(makeToken(tag, value, token));
+    return length;
+  };
+  addError = function(tag, value, length, token) {
+    if (length == null) {
+      length = value.length;
+    }
+    if (token == null) {
+      token = {};
+    }
+    errors.push(makeToken(tag, value, token));
     return length;
   };
   pushBracket = function(b) {
@@ -1034,6 +1110,7 @@ exports.tokenize = function(code) {
     chunk: code,
     parenthesisStack: [],
     addToken: addToken,
+    addError: addError,
     brackets: {
       push: pushBracket,
       pop: popBracket,
@@ -1117,7 +1194,7 @@ literalToken = function(c) {
   }
   if ((t = LITERAL_CLOSER[v]) != null) {
     if (c.brackets.latest() !== v) {
-      return c.addToken(TOKEN.ERROR.UNMATCHED_BRACKET, v);
+      return c.addError(TOKEN.ERROR.UNMATCHED_BRACKET, v);
     }
     c.brackets.pop();
     return c.addToken(t, v);
@@ -1169,7 +1246,7 @@ errorToken = function(c) {
   if (!(match = c.chunk.match(ERROR))) {
     return 0;
   }
-  return c.addToken(TOKEN.ERROR.UNKNOWN_TOKEN, match[0]);
+  return c.addError(TOKEN.ERROR.UNKNOWN_TOKEN, match[0]);
 };
 
 updateLocation = function(l, c, chunk, offset) {
@@ -1316,7 +1393,7 @@ parser = require("parser");
 
 codes = ["succ   := \\n f x.f (n f x)", "pred   := \\n f x.n (\\g h.h (g f)) (\\u.x) (\\v.v)", "+      := \\m n f x.m f (n f x)", "*      := \\m n f.m (n f)", "sub    := \\m n.n pred m", "div    := \\n.Y (\\f q m n.(s := sub m n) isZero s q (f (succ q) s n)) 0 (succ n)", "true   := \\x y.x", "false  := \\x y.y", "and    := \\p q.p q false", "or     := \\p q.p true q", "not    := \\p x y.p y x", "if     := \\p x y.p x y", "isZero := \\n.n (\\x.false) true", "pair   := \\a b p.p a b", "first  := \\p.p true", "second := \\p.p false", "cons   := pair", "head   := first", "tail   := second", "list   := Y (\\f A m.isnil m (A m) (f (\\x.A (cons m x)))) (\\u.u)", "Y      := \\f.(\\x.f (x x)) (\\x.f (x x))", "K      := \\x y.x", "S      := \\x y z.x z (y z)", "I      := \\x.x", "X      := \\x.x S K", "fact   := Y (\\f r n.isZero n r (f (* r n) (pred n))) 1"];
 
-parser.parse(tokenizer.tokenize(codes.join("\n"))).accept(stdlib);
+parser.parse(tokenizer.tokenize(codes.join("\n"), []), []).accept(stdlib);
 
 
 

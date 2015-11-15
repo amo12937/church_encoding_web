@@ -40,6 +40,12 @@ body {
   font-size: 14px;
   line-height: 1.2; }
 
+.ce-out-error {
+  color: #f00; }
+  .ce-out-error:before {
+    content: "!";
+    padding: 0 7px 0 0; }
+
 .ce-out-code:before {
   content: ">";
   padding: 0 7px 0 0; }
